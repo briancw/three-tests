@@ -13,14 +13,34 @@ if(halt){
 
 // var cube_size = Math.round(doc_diagonal / tile_width * 1.5);
 
-var cube_size = 50;
+var cube_size = 36;
 var map_size = 2500000;
 var origin = [552648, 429251];
 var origin_point = coords_to_index(origin);
 
-
 function coords_to_index(coords){
 	return (coords[0] * map_size) + coords[1];
+}
+
+function index_to_coords(index){
+	var tmp_x = Math.floor(index / map_size);
+	var tmp_z = index - (tmp_x * map_size);
+	return [ tmp_x, tmp_z ];
+}
+
+function origin_points(){
+	var origin_points = Array();
+	origin_points[0] = ((origin[0] - cube_size) * map_size) + (origin[1] - cube_size);
+	origin_points[1] = ((origin[0] - cube_size) * map_size) + origin[1];
+	origin_points[2] = ((origin[0] - cube_size) * map_size) + (origin[1] + cube_size);
+	origin_points[3] = ((origin[0] * map_size)) + (origin[1] - cube_size);
+	origin_points[4] = ((origin[0] * map_size)) + origin[1];
+	origin_points[5] = ((origin[0] * map_size)) + (origin[1] + cube_size);
+	origin_points[6] = ((origin[0] + cube_size) * map_size) + (origin[1] - cube_size);
+	origin_points[7] = ((origin[0] + cube_size) * map_size) + origin[1];
+	origin_points[8] = ((origin[0] + cube_size) * map_size) + (origin[1] + cube_size);
+
+	return origin_points;
 }
 
 var network = new Network();
@@ -144,7 +164,7 @@ function Network(){
 	ws.onopen = function(){
 		init_socket_connect = true;
 		// self.get_map_data( origin_points() );
-		self.get_map_data( [origin_point] );
+		self.get_map_data( origin_points() );
 	};
 
 	this.get_map_data = function(origin_points){
@@ -203,6 +223,11 @@ function Terrain(){
 
 	this.add_tilemap_to_scene = function(tilemap, tilemap_index){
 
+		var origin_x = (index_to_coords(tilemap_index)[0] - origin[0]) * terrain.tile_width * 1.01;
+		var origin_z = (index_to_coords(tilemap_index)[1] - origin[1]) * terrain.tile_width * 1.01;
+
+		// console.log(tilemap);
+// return false;
 
 		var material_array = [];
 		material_array.push( new THREE.MeshLambertMaterial( { map: THREE.ImageUtils.loadTexture('assets/img/grass.jpg') } ) );
@@ -254,8 +279,8 @@ function Terrain(){
 			// var tmp_cube = new THREE.Mesh( cube_geometry, materials[color_index] );
 			// var tmp_cube = new THREE.Mesh( cube_geometry, grass_material );
 
-			tmp_cube.position.x = ((tilemap[i].x - (cube_size/2)) * this.tile_width);
-			tmp_cube.position.z = ((tilemap[i].z - (cube_size/2)) * this.tile_width);
+			tmp_cube.position.x = ((tilemap[i].x - (cube_size/2)) * this.tile_width) + origin_x;
+			tmp_cube.position.z = ((tilemap[i].z - (cube_size/2)) * this.tile_width) + origin_z;
 			tmp_cube.position.y = tmp_height;
 
 			tmp_cube.matrixAutoUpdate = false;
