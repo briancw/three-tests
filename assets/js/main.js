@@ -3,29 +3,21 @@ var doc_width = $(window).width();
 var doc_height = $(window).height() - $('.ui_container').height();
 // var doc_diagonal = Math.ceil(Math.sqrt( Math.pow(doc_width,2) + Math.pow(doc_height*2,2) ));
 // var iso_width = Math.sqrt( Math.pow(doc_width, 2) + Math.pow(doc_width/2, 2) );
-// var cube_width = 50;
+// var tile_width = 50;
+var do_rotate = location.search.split('rotate=')[1];
+var halt = location.search.split('halt=')[1];
 
-// var cube_size = Math.round(doc_diagonal / cube_width * 1.5);
+if(halt){
+ catch_fire
+}
 
-var cube_size = 58;
+// var cube_size = Math.round(doc_diagonal / tile_width * 1.5);
+
+var cube_size = 50;
 var map_size = 2500000;
 var origin = [552648, 429251];
 var origin_point = coords_to_index(origin);
 
-function origin_points(){
-	var origin_points = Array();
-	origin_points[0] = ((origin[0] - cube_size) * map_size) + (origin[1] - cube_size);
-	origin_points[1] = ((origin[0] - cube_size) * map_size) + origin[1];
-	origin_points[2] = ((origin[0] - cube_size) * map_size) + (origin[1] + cube_size);
-	origin_points[3] = ((origin[0] * map_size)) + (origin[1] - cube_size);
-	origin_points[4] = ((origin[0] * map_size)) + origin[1];
-	origin_points[5] = ((origin[0] * map_size)) + (origin[1] + cube_size);
-	origin_points[6] = ((origin[0] + cube_size) * map_size) + (origin[1] - cube_size);
-	origin_points[7] = ((origin[0] + cube_size) * map_size) + origin[1];
-	origin_points[8] = ((origin[0] + cube_size) * map_size) + (origin[1] + cube_size);
-
-	return origin_points;
-}
 
 function coords_to_index(coords){
 	return (coords[0] * map_size) + coords[1];
@@ -35,8 +27,9 @@ var network = new Network();
 var terrain = new Terrain();
 init();
 var ui = new UI();
-ui.click_listener();
-ui.pan_listener();
+// ui.click_listener();
+// ui.pan_listener();
+ui.keyboard_listener();
 
 window.requestAnimFrame = (function(){
 	return window.requestAnimationFrame		||
@@ -50,16 +43,18 @@ window.requestAnimFrame = (function(){
 (function animloop(){
 	requestAnimFrame(animloop);
 
-	// camera.position.x += 5;
-	// var timer = Date.now() * 0.0001;
-	// camera.position.set(Math.cos( timer ) * 10, 7, Math.sin( timer ) * 10);
-	// camera.lookAt( scene.position );
+	if(do_rotate){
+		var timer = Date.now() * 0.0001;
+		camera.position.set(Math.cos( timer ) * 10, 7, Math.sin( timer ) * 10);
+		camera.lookAt( scene.position );
+	}
 	// camera.position.y -= Math.sin( timer ) * 10;
 	// camera.position.y -= 0.1;
 
 	// terrain.cube.rotation.x += 0.01;
 	// terrain.cube.rotation.y += 0.01;
 
+	ui.pan_map_loop();
 	renderer.render( scene, camera );
 	stats.update();
 	// cube.rotation.x += 0.01;
@@ -72,9 +67,8 @@ function init(){
 	renderer.setPixelRatio( window.devicePixelRatio );
 	renderer.setSize( window.innerWidth, window.innerHeight );
 
-	var three_canvas = renderer.domElement;
-	$(three_canvas).addClass('canvas');
-	$('body').append(three_canvas);
+	$(renderer.domElement).addClass('canvas');
+	$('body').append(renderer.domElement);
 
 	stats = new Stats();
 	stats.domElement.style.position = 'absolute';
@@ -96,26 +90,6 @@ function init(){
 
 	// controls = new THREE.OrbitControls( camera );
 	// controls.damping = 0.2;
-
-/*
-	// Grid
-	var size = 500, step = 50;
-	var geometry = new THREE.Geometry();
-	for ( var i = - size; i <= size; i += step ) {
-		geometry.vertices.push( new THREE.Vector3( - size, 0, i) );
-		geometry.vertices.push( new THREE.Vector3(   size, 0, i) );
-		geometry.vertices.push( new THREE.Vector3( i, 0, - size) );
-		geometry.vertices.push( new THREE.Vector3( i, 0,   size) );
-	}
-	var material = new THREE.LineBasicMaterial( { color: 0x000000, opacity: 0.2 } );
-	var line = new THREE.Line( geometry, material, THREE.LinePieces );
-	scene.add( line );
-*/
-
-	// var tmp_cube = new THREE.Mesh( geometry, material );
-	// tmp_cube.position.x = 0;
-	// tmp_cube.position.z = 0;
-	// scene.add( tmp_cube );
 
 	// Lights
 
@@ -148,8 +122,8 @@ function Network(){
 	var init_socket_connect = false;
 	var current_env = window.location.host;
 
-	if(current_env == 'simple-rts.zimmerloe.com'){
-		var server_url = 'ws://simple-rts.zimmerloe.com:9005';
+	if(current_env == 'three.zimmerloe.com'){
+		var server_url = 'ws://three.zimmerloe.com:9005';
 	} else {
 		var server_url = 'ws://localhost:9005';
 	}
@@ -210,69 +184,84 @@ function Network(){
 
 function Terrain(){
 
-	this.cube;
-	this.cube_width = 60;
+	this.tilemaps = Object();
+	this.tile_width = 100;
+
+	this.brown = 0x77543c;
+	this.green = 0x326800;
+	this.blue = 0x254e78;
 
 	this.update_tilemaps = function(tilemaps){
 
+		for(var i in tilemaps){
+			this.tilemaps[i] = tilemaps[i];
 
-		var brown = 0x77543c;
-		var green = 0x326800;
+			this.add_tilemap_to_scene(tilemaps[i], i);
+		}
+
+	}
+
+	this.add_tilemap_to_scene = function(tilemap, tilemap_index){
+
 
 		var material_array = [];
-		material_array.push( new THREE.MeshLambertMaterial( { color: brown } ) );
-		material_array.push( new THREE.MeshLambertMaterial( { color: brown } ) );
-		material_array.push( new THREE.MeshLambertMaterial( { color: green } ) );
-		material_array.push( new THREE.MeshLambertMaterial( { color: brown } ) );
-		material_array.push( new THREE.MeshLambertMaterial( { color: brown } ) );
-		material_array.push( new THREE.MeshLambertMaterial( { color: brown } ) );
+		material_array.push( new THREE.MeshLambertMaterial( { map: THREE.ImageUtils.loadTexture('assets/img/grass.jpg') } ) );
+		// material_array.push( new THREE.MeshBasicMaterial( { color: this.green } ) );
+		material_array.push( new THREE.MeshBasicMaterial( { color: this.brown } ) );
+		material_array.push( new THREE.MeshBasicMaterial( { color: this.brown } ) );
+		material_array.push( new THREE.MeshBasicMaterial( { color: this.brown } ) );
+		material_array.push( new THREE.MeshBasicMaterial( { color: this.brown } ) );
+		material_array.push( new THREE.MeshBasicMaterial( { color: this.brown } ) );
 
-		var grass_block = new THREE.MeshFaceMaterial(material_array);
+		var grass_material = new THREE.MeshFaceMaterial(material_array);
 
-		var geometry = new THREE.BoxGeometry( this.cube_width, this.cube_width, this.cube_width );
+		var stone_material = new THREE.MeshLambertMaterial({
+			map: THREE.ImageUtils.loadTexture('assets/img/stone.png')
+		});
 
-		this.cube = new THREE.Mesh( geometry, grass_block );
-		scene.add(this.cube);
+		var water_material = new THREE.MeshLambertMaterial({
+			map: THREE.ImageUtils.loadTexture('assets/img/water.jpg')
+		});
 
-		for(var foo in tilemaps){
 
-			var color_index = 0;
-			var materials = Object();
-			materials[0] = new THREE.MeshLambertMaterial( { color: 0x254e78 } );
-			// materials[1] = new THREE.MeshLambertMaterial( { color: 0x326800 } );
-			materials[1] = grass_block;
-			materials[2] = new THREE.MeshLambertMaterial( { color: 0x4C7124 } );
-			materials[3] = new THREE.MeshLambertMaterial( { color: 0x59842A } );
-			materials[4] = new THREE.MeshLambertMaterial( { color: 0x7A8781 } );
+		var cube_geometry = new THREE.BoxGeometry( this.tile_width, this.tile_width, this.tile_width );
+		var color_index = 1;
 
-			for(var i in tilemaps[foo]){
+		var world_mesh = new THREE.Mesh();
 
-				var tmp_height = 25;
+		for(var i in tilemap){
 
-				if(tilemaps[foo][i].height > 0 && tilemaps[foo][i].height < 0.57){
-					color_index = 0;
-					tmp_height = 0;
-				} else if(tilemaps[foo][i].height > 0.57 && tilemaps[foo][i].height < 0.6 ){
-					color_index = 1;
-					tmp_height = (tilemaps[foo][i].height - 0.57) * 10000000;
-					// if(Math.round(Math.random()) > 0.9){ cl(tmp_height)}
-				} else if(tilemaps[foo][i].height > 0.6 && tilemaps[foo][i].height < 0.7 ){
-					color_index = 2;
-				} else if(tilemaps[foo][i].height > 0.7 && tilemaps[foo][i].height < 0.8 ){
-					color_index = 3;
-				} else if(tilemaps[foo][i].height > 0.8 && tilemaps[foo][i].height < 1 ){
-					color_index = 4;
-				}
+			var tmp_height = 25;
 
-				var tmp_cube = new THREE.Mesh( geometry, materials[color_index] );
-				// var tmp_cube = new THREE.Mesh( geometry, grass_block );
-
-				tmp_cube.position.x = ((tilemaps[foo][i].x - (cube_size/2)) * this.cube_width);
-				tmp_cube.position.z = ((tilemaps[foo][i].z - (cube_size/2)) * this.cube_width);
-				tmp_cube.position.y = tmp_height;
-				scene.add( tmp_cube );
+			if(tilemap[i].height > 0 && tilemap[i].height < 0.57){
+			// 	color_index = 0;
+			// 	tmp_height = 0;
+				var tmp_cube = new THREE.Mesh( cube_geometry, water_material );
+			} else if(tilemap[i].height > 0.57 && tilemap[i].height < 0.6 ){
+				var tmp_cube = new THREE.Mesh( cube_geometry, grass_material );
 			}
+			// 	color_index = 1;
+			// 	tmp_height = (tilemap[i].height - 0.57) * 10000000;
+			// 	// if(Math.round(Math.random()) > 0.9){ cl(tmp_height)}
+			// } else if(tilemap[i].height > 0.6 && tilemap[i].height < 0.7 ){
+			// 	color_index = 2;
+			// } else if(tilemap[i].height > 0.7 && tilemap[i].height < 0.8 ){
+			// 	color_index = 3;
+			// } else if(tilemap[i].height > 0.8 && tilemap[i].height < 1 ){
+			// 	color_index = 4;
+			// }
 
+			// var tmp_cube = new THREE.Mesh( cube_geometry, materials[color_index] );
+			// var tmp_cube = new THREE.Mesh( cube_geometry, grass_material );
+
+			tmp_cube.position.x = ((tilemap[i].x - (cube_size/2)) * this.tile_width);
+			tmp_cube.position.z = ((tilemap[i].z - (cube_size/2)) * this.tile_width);
+			tmp_cube.position.y = tmp_height;
+
+			tmp_cube.matrixAutoUpdate = false;
+			tmp_cube.updateMatrix();
+
+			scene.add( tmp_cube );
 		}
 
 	}
@@ -285,6 +274,9 @@ function UI(){
 	this.last_x;
 	this.last_y;
 	this.is_click = true;
+	this.pan_amount = 15;
+	this.half_map = (cube_size * terrain.tile_width / 2);
+	this.buffer = 10;
 
 	this.visual_error = function(error_message){
 		$('.error_message_box .error_message').html(error_message);
@@ -306,6 +298,76 @@ function UI(){
 				self.is_click = true;
 			}
 		});
+	}
+
+	this.keyboard_listener = function(){
+		this.move_up = false;
+		this.move_up = false;
+		this.move_up = false;
+		this.move_up = false;
+
+		$(document).keydown(function(e){
+			if(e.keyCode == 87){ // Up
+				self.move_up = true;
+			} else if(e.keyCode == 83){ // Down
+				self.move_down = true;
+			} else if(e.keyCode == 65){ // Left
+				self.move_left = true;
+			} else if(e.keyCode == 68){ // Right
+				self.move_right = true;
+			}
+
+		});
+
+		$(document).keyup(function(e){
+
+			if(e.keyCode == 87){ // Up
+				self.move_up = false;
+			} else if(e.keyCode == 83){ // Down
+				self.move_down = false;
+			} else if(e.keyCode == 65){ // Left
+				self.move_left = false;
+			} else if(e.keyCode == 68){ // Right
+				self.move_right = false;
+			}
+
+		});
+
+	}
+
+	this.pan_map_loop = function(){
+
+		if( this.move_up ){
+			this.translate_map( this.pan_amount, this.pan_amount );
+		} else if( this.move_down ){
+			this.translate_map( -this.pan_amount, -this.pan_amount );
+		}
+
+		if( this.move_left ){
+			this.translate_map( this.pan_amount, -this.pan_amount );
+		} else if( this.move_right ){
+			this.translate_map( -this.pan_amount, this.pan_amount );
+		}
+
+	}
+
+	this.translate_map = function(difference_x, difference_z){
+		camera.position.x += difference_x;
+		camera.position.z += difference_z;
+
+		if(camera.position.x >= this.half_map + this.buffer){
+			this.load_chunk(0,-1); // NW
+		} else if(camera.position.z >= this.half_map + this.buffer) {
+			this.load_chunk(1,-1); // NE
+		} else if(camera.position.x <= -this.half_map - this.buffer) {
+			this.load_chunk(0,1); // SW
+		} else if(camera.position.z <= -this.half_map - this.buffer) {
+			this.load_chunk(1,1); // SE
+		}
+	}
+
+	this.load_chunk = function(direction, value){
+		// console.log(direction, value);
 	}
 
 	// $('#'+this.ui_id).mouseup(function(e){
