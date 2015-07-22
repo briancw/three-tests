@@ -7,7 +7,7 @@ var doc_height = $(window).height() - $('.ui_container').height();
 
 // var cube_size = Math.round(doc_diagonal / cube_width * 1.5);
 
-var cube_size = 80;
+var cube_size = 58;
 var map_size = 2500000;
 var origin = [552648, 429251];
 var origin_point = coords_to_index(origin);
@@ -35,8 +35,8 @@ var network = new Network();
 var terrain = new Terrain();
 init();
 var ui = new UI();
-// ui.click_listener();
-// ui.pan_listener();
+ui.click_listener();
+ui.pan_listener();
 
 window.requestAnimFrame = (function(){
 	return window.requestAnimationFrame		||
@@ -51,11 +51,14 @@ window.requestAnimFrame = (function(){
 	requestAnimFrame(animloop);
 
 	// camera.position.x += 5;
-	var timer = Date.now() * 0.0001;
-	camera.position.set(Math.cos( timer ) * 10, 7, Math.sin( timer ) * 10);
-	camera.lookAt( scene.position );
+	// var timer = Date.now() * 0.0001;
+	// camera.position.set(Math.cos( timer ) * 10, 7, Math.sin( timer ) * 10);
+	// camera.lookAt( scene.position );
 	// camera.position.y -= Math.sin( timer ) * 10;
 	// camera.position.y -= 0.1;
+
+	// terrain.cube.rotation.x += 0.01;
+	// terrain.cube.rotation.y += 0.01;
 
 	renderer.render( scene, camera );
 	stats.update();
@@ -207,15 +210,37 @@ function Network(){
 
 function Terrain(){
 
+	this.cube;
+	this.cube_width = 60;
+
 	this.update_tilemaps = function(tilemaps){
+
+
+		var brown = 0x77543c;
+		var green = 0x326800;
+
+		var material_array = [];
+		material_array.push( new THREE.MeshLambertMaterial( { color: brown } ) );
+		material_array.push( new THREE.MeshLambertMaterial( { color: brown } ) );
+		material_array.push( new THREE.MeshLambertMaterial( { color: green } ) );
+		material_array.push( new THREE.MeshLambertMaterial( { color: brown } ) );
+		material_array.push( new THREE.MeshLambertMaterial( { color: brown } ) );
+		material_array.push( new THREE.MeshLambertMaterial( { color: brown } ) );
+
+		var grass_block = new THREE.MeshFaceMaterial(material_array);
+
+		var geometry = new THREE.BoxGeometry( this.cube_width, this.cube_width, this.cube_width );
+
+		this.cube = new THREE.Mesh( geometry, grass_block );
+		scene.add(this.cube);
 
 		for(var foo in tilemaps){
 
-			var geometry = new THREE.BoxGeometry( 50, 50, 50 );
 			var color_index = 0;
 			var materials = Object();
 			materials[0] = new THREE.MeshLambertMaterial( { color: 0x254e78 } );
-			materials[1] = new THREE.MeshLambertMaterial( { color: 0x326800 } );
+			// materials[1] = new THREE.MeshLambertMaterial( { color: 0x326800 } );
+			materials[1] = grass_block;
 			materials[2] = new THREE.MeshLambertMaterial( { color: 0x4C7124 } );
 			materials[3] = new THREE.MeshLambertMaterial( { color: 0x59842A } );
 			materials[4] = new THREE.MeshLambertMaterial( { color: 0x7A8781 } );
@@ -231,7 +256,6 @@ function Terrain(){
 					color_index = 1;
 					tmp_height = (tilemaps[foo][i].height - 0.57) * 10000000;
 					// if(Math.round(Math.random()) > 0.9){ cl(tmp_height)}
-					// console.log(height);
 				} else if(tilemaps[foo][i].height > 0.6 && tilemaps[foo][i].height < 0.7 ){
 					color_index = 2;
 				} else if(tilemaps[foo][i].height > 0.7 && tilemaps[foo][i].height < 0.8 ){
@@ -241,14 +265,15 @@ function Terrain(){
 				}
 
 				var tmp_cube = new THREE.Mesh( geometry, materials[color_index] );
-				tmp_cube.position.x = ((tilemaps[foo][i].x - (cube_size/2)) * 50);
-				tmp_cube.position.z = ((tilemaps[foo][i].z - (cube_size/2)) * 50);
+				// var tmp_cube = new THREE.Mesh( geometry, grass_block );
+
+				tmp_cube.position.x = ((tilemaps[foo][i].x - (cube_size/2)) * this.cube_width);
+				tmp_cube.position.z = ((tilemaps[foo][i].z - (cube_size/2)) * this.cube_width);
 				tmp_cube.position.y = tmp_height;
 				scene.add( tmp_cube );
 			}
 
 		}
-
 
 	}
 
