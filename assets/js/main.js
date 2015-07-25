@@ -13,8 +13,9 @@ if(halt){
 
 // var cube_size = Math.round(doc_diagonal / tile_width * 1.5);
 
-// var cube_size = 36;
-var cube_size = 60;
+// var cube_size = 18;
+// var cube_size = 60;
+var cube_size = 36;
 var map_size = 2500000;
 var origin = [552648, 429251];
 origin[0] += 20;
@@ -71,6 +72,8 @@ window.requestAnimFrame = (function(){
 		camera.lookAt( scene.position );
 	}
 
+	// camera.rotation.x += 0.001;
+
 	// camera.position.y -= Math.sin( timer ) * 10;
 	// camera.position.y -= 0.1;
 
@@ -109,7 +112,8 @@ function init(){
 	var aspect = window.innerWidth / window.innerHeight;
 	var d = 800;
 	camera = new THREE.OrthographicCamera( - d * aspect, d * aspect, d, - d, -2000, 2000 );
-	camera.position.set(-10, 8, -10);
+	// camera.position.set(-10, 8, -10);
+	camera.position.set(5, 5, 5);
 	camera.lookAt( scene.position );
 
 	// controls = new THREE.OrbitControls( camera );
@@ -167,8 +171,8 @@ function Network(){
 
 	ws.onopen = function(){
 		init_socket_connect = true;
-		self.get_map_data( [origin_point] );
-		// self.get_map_data( origin_points() );
+		// self.get_map_data( [origin_point] );
+		self.get_map_data( origin_points() );
 	};
 
 	this.get_map_data = function(origin_points){
@@ -211,6 +215,7 @@ function Terrain(){
 	this.tilemaps = Object();
 	this.tile_width = 100;
 	var self = this;
+	this.map_ready = false;
 
 	(function init_assets(){
 		self.brown = 0x77543c;
@@ -254,6 +259,7 @@ function Terrain(){
 		}
 
 		this.draw_tilemap( this.tilemaps[origin_point] );
+		this.map_ready = true;
 	}
 
 	this.render_tiles = function(tilemap, tilemap_index){
@@ -282,8 +288,8 @@ function Terrain(){
 			// } else if(tilemap[i].height > 0.8 && tilemap[i].height < 1 ){
 			// }
 
-			tmp_cube.position.x = ((tilemap[i].x - (cube_size/2)) * this.tile_width) + origin_x * 1.01;
-			tmp_cube.position.z = ((tilemap[i].z - (cube_size/2)) * this.tile_width) + origin_z * 1.01;
+			tmp_cube.position.x = ((tilemap[i].x - (cube_size/2)) * this.tile_width);
+			tmp_cube.position.z = ((tilemap[i].z - (cube_size/2)) * this.tile_width);
 			tmp_cube.position.y = tmp_height;
 
 			tmp_cube.matrixAutoUpdate = false;
@@ -294,6 +300,9 @@ function Terrain(){
 		}
 
 		var chunk = new THREE.Mesh( geometry, self.blocks );
+		chunk.position.x = origin_x * 1.01;
+		chunk.position.z = origin_z * 1.01;
+
 		this.tilemaps[tilemap_index] = chunk;
 		// scene.add(chunk);
 
@@ -322,7 +331,11 @@ function UI(){
 		nw: false,
 		ne: false,
 		sw: false,
-		se: false
+		se: false,
+		n: false,
+		s: false,
+		e: false,
+		w: false
 	};
 
 	this.visual_error = function(error_message){
@@ -383,43 +396,79 @@ function UI(){
 	}
 
 	this.check_chunks_loop = function(){
-		return false;
-		if(camera.position.x >= this.half_map + this.buffer){
-			if(!this.tilemaps_shown.nw){
-				terrain.draw_tilemap( terrain.tilemaps[ origin_points()[8] ] );
-				terrain.draw_tilemap( terrain.tilemaps[ origin_points()[7] ] );
-				terrain.draw_tilemap( terrain.tilemaps[ origin_points()[6] ] );
-				this.tilemaps_shown.nw = true;
-			} // NW
-		} else if(camera.position.z >= this.half_map + this.buffer) {
-			if(!this.tilemaps_shown.ne){
+		// return false;
+		var something = 400;
+		if(!terrain.map_ready){
+			return false;
+		}
 
-			} // NE
-		} else if(camera.position.x <= -this.half_map - this.buffer) {
-			if(!this.tilemaps_shown.sw){
-				terrain.draw_tilemap( terrain.tilemaps[ origin_points()[2] ] );
-				terrain.draw_tilemap( terrain.tilemaps[ origin_points()[1] ] );
-				terrain.draw_tilemap( terrain.tilemaps[ origin_points()[0] ] );
-				this.tilemaps_shown.sw = true;
-			} // SW
-		} else if(camera.position.z <= -this.half_map - this.buffer) {
-			if(!this.tilemaps_shown.se){
-			} // SE
+		if(camera.position.x < 0 && camera.position.z < 0 && !this.tilemaps_shown.n){
+			scene.add( terrain.tilemaps[ origin_points()[0] ] );
+			scene.add( terrain.tilemaps[ origin_points()[1] ] );
+			scene.add( terrain.tilemaps[ origin_points()[3] ] );
+
+			scene.remove( terrain.tilemaps[ origin_points()[5] ] );
+			scene.remove( terrain.tilemaps[ origin_points()[7] ] );
+			scene.remove( terrain.tilemaps[ origin_points()[8] ] );
+
+			this.tilemaps_shown.n = true;
+			this.tilemaps_shown.s = false;
+			this.tilemaps_shown.e = false;
+			this.tilemaps_shown.w = false;
+		} else if(camera.position.x < 0 && camera.position.z > 0 && !this.tilemaps_shown.w){
+			scene.add( terrain.tilemaps[ origin_points()[1] ] );
+			scene.add( terrain.tilemaps[ origin_points()[2] ] );
+			scene.add( terrain.tilemaps[ origin_points()[5] ] );
+
+			scene.remove( terrain.tilemaps[ origin_points()[3] ] );
+			scene.remove( terrain.tilemaps[ origin_points()[6] ] );
+			scene.remove( terrain.tilemaps[ origin_points()[7] ] );
+
+			this.tilemaps_shown.w = true;
+			this.tilemaps_shown.n = false;
+			this.tilemaps_shown.s = false;
+			this.tilemaps_shown.e = false;
+		} else if(camera.position.x > 0 && camera.position.z > 0 && !this.tilemaps_shown.s){
+			scene.add( terrain.tilemaps[ origin_points()[5] ] );
+			scene.add( terrain.tilemaps[ origin_points()[7] ] );
+			scene.add( terrain.tilemaps[ origin_points()[8] ] );
+
+			scene.remove( terrain.tilemaps[ origin_points()[0] ] );
+			scene.remove( terrain.tilemaps[ origin_points()[1] ] );
+			scene.remove( terrain.tilemaps[ origin_points()[3] ] );
+
+			this.tilemaps_shown.s = true;
+			this.tilemaps_shown.n = false;
+			this.tilemaps_shown.w = false;
+			this.tilemaps_shown.e = false;
+		} else if(camera.position.x > 0 && camera.position.z < 0 && !this.tilemaps_shown.e){
+			scene.add( terrain.tilemaps[ origin_points()[3] ] );
+			scene.add( terrain.tilemaps[ origin_points()[6] ] );
+			scene.add( terrain.tilemaps[ origin_points()[7] ] );
+
+			scene.remove( terrain.tilemaps[ origin_points()[1] ] );
+			scene.remove( terrain.tilemaps[ origin_points()[2] ] );
+			scene.remove( terrain.tilemaps[ origin_points()[5] ] );
+
+			this.tilemaps_shown.e = true;
+			this.tilemaps_shown.n = false;
+			this.tilemaps_shown.s = false;
+			this.tilemaps_shown.w = false;
 		}
 	}
 
 	this.pan_map_loop = function(){
 
 		if( this.move_up ){
-			this.translate_map( this.pan_amount, this.pan_amount );
-		} else if( this.move_down ){
 			this.translate_map( -this.pan_amount, -this.pan_amount );
+		} else if( this.move_down ){
+			this.translate_map( this.pan_amount, this.pan_amount );
 		}
 
 		if( this.move_left ){
-			this.translate_map( this.pan_amount, -this.pan_amount );
-		} else if( this.move_right ){
 			this.translate_map( -this.pan_amount, this.pan_amount );
+		} else if( this.move_right ){
+			this.translate_map( this.pan_amount, -this.pan_amount );
 		}
 
 	}
@@ -427,7 +476,7 @@ function UI(){
 	this.translate_map = function(difference_x, difference_z){
 		camera.position.x += difference_x;
 		camera.position.z += difference_z;
-
+// console.log(camera.position);
 		if(camera.position.x >= this.half_map + this.buffer){
 			this.load_chunk(0,-1); // NW
 		} else if(camera.position.z >= this.half_map + this.buffer) {
