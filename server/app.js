@@ -42,21 +42,23 @@ wss.on('connection', function connection(ws) {
 
 		switch (message_type){
 			case 'get_map_data':
-				// console.time('generate map');
+				console.time('generate map');
 				var tilemaps = new Object();
-				var origin_points = parsed_message.map_params.origin_points;
+				var origin_point = parsed_message.map_params.origin_point;
+				var distance = parsed_message.map_params.distance;
+				var cube_size = parsed_message.map_params.cube_size;
 
-				for(var i in origin_points){
-					var origin_point = parsed_message.map_params.origin_points[i];
-					var tmp_x = Math.floor( origin_point / map_size);
-					var tmp_y = origin_point - (tmp_x * map_size);
+				var start_origin = origin_point - (map_size * cube_size * distance) - (cube_size * distance);
 
-					parsed_message.map_params.origin = [tmp_x, tmp_y];
-					tilemaps[origin_point] = generate_tilemap(parsed_message.map_params);
+				for(var ix = 0; ix < (distance * 2) + 1; ix++){
+					for(var iz = 0; iz < (distance * 2) + 1; iz++){
+						var tmp_index = start_origin + (map_size * cube_size * ix) + (iz * cube_size);
+						tilemaps[tmp_index] = generate_tilemap( parsed_message.map_params, tmp_index );
+					}
 				}
 
-				ws.send( get_json( {type:'map_data', tilemaps: tilemaps, origin_points:origin_points} ) );
-				// console.timeEnd('generate map');
+				ws.send( get_json( {type:'map_data', tilemaps: tilemaps} ) );
+				console.timeEnd('generate map');
 				break;
 
 			default:
@@ -91,7 +93,7 @@ function pad(num, size) {
 	return s.substr(s.length-size);
 }
 
-function generate_tilemap(map_params){
+function generate_tilemap(map_params, origin_point){
 
 	if( typeof(map_params.cube_size) != 'undefined' ){
 		var cube_size = parseInt(map_params.cube_size);
@@ -105,24 +107,10 @@ function generate_tilemap(map_params){
 		map_size = 2500000;
 	}
 
-	// console.log( map_params );
-	if( typeof(map_params.origin) != 'undefined' && map_params.origin.length ){
-		var origin = map_params.origin;
-	} else {
-		var origin = [0,0];
-	}
-
-	// var tilemap = {
-	// 	ocean: { tiles: Array(), color: '#254e78'},
-	// 	coastline: { tiles: Array(), color: '#326800' },
-	// 	inland: { tiles: Array(), color: '#4C7124'},
-	// 	highland: { tiles: Array(), color: '#59842A'},
-	// 	mountain: { tiles: Array(), color: '#7A8781'}
-	// }
 	var tilemap = Array();
 
-	var start_x = parseInt(origin[0], 10);
-	var start_y = parseInt(origin[1], 10);
+	var start_x = Math.floor( origin_point / map_size);
+	var start_y = origin_point - (start_x * map_size);
 
 	var scale = cube_size / map_size;
 	var local_x = 0;

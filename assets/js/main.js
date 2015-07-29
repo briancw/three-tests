@@ -17,8 +17,9 @@ if(halt){
 // var cube_size = 60;
 var cube_size = 36;
 var map_size = 2500000;
+var start_origin = [552648, 429251];
 var origin = [552648, 429251];
-origin[0] += 20;
+// origin[0] += 20;
 var origin_point = coords_to_index(origin);
 
 function coords_to_index(coords){
@@ -81,12 +82,17 @@ window.requestAnimFrame = (function(){
 	// terrain.cube.rotation.y += 0.01;
 
 	ui.pan_map_loop();
-	ui.check_chunks_loop();
+
+	pointer.position.x = camera.position.x;
+	pointer.position.z = camera.position.z;
+
 	renderer.render( scene, camera );
 	stats.update();
 	// cube.rotation.x += 0.01;
 	// cube.rotation.y += 0.01;
 })();
+
+var pointer;
 
 function init(){
 	renderer = new THREE.WebGLRenderer();
@@ -112,7 +118,7 @@ function init(){
 	var aspect = window.innerWidth / window.innerHeight;
 	var d = 800;
 	camera = new THREE.OrthographicCamera( - d * aspect, d * aspect, d, - d, -2000, 2000 );
-	// camera.position.set(-10, 8, -10);
+	// camera.position.set(10, 8, 10);
 	camera.position.set(5, 5, 5);
 	camera.lookAt( scene.position );
 
@@ -130,6 +136,10 @@ function init(){
 	terrain.sun_light.position.y = 400;
 	terrain.sun_light.position.normalize();
 	scene.add( terrain.sun_light );
+
+	pointer = new THREE.Mesh( new THREE.BoxGeometry(10,10,10), new THREE.MeshLambertMaterial({color:0x77543c}) );
+	pointer.position.set(0,50,0);
+	scene.add(pointer);
 
 	// var pointLight = new THREE.PointLight(0xFFFFFF);
 	// pointLight.position.x = 0;
@@ -171,13 +181,13 @@ function Network(){
 
 	ws.onopen = function(){
 		init_socket_connect = true;
-		// self.get_map_data( [origin_point] );
-		self.get_map_data( origin_points() );
+		self.get_map_data( origin_point, 2 );
 	};
 
-	this.get_map_data = function(origin_points){
-		var map_params = {cube_size: cube_size, map_size: map_size, origin_points: origin_points};
+	this.get_map_data = function(origin_point, distance){
+		var map_params = {cube_size: cube_size, map_size: map_size, origin_point: origin_point, distance: distance};
 		ws.send( get_json({type:'get_map_data', map_params:map_params}) );
+		// console.log( origin_points() );
 	};
 
 	ws.onmessage = function (ret){
@@ -216,6 +226,7 @@ function Terrain(){
 	this.tile_width = 100;
 	var self = this;
 	this.map_ready = false;
+	this.active_tile_offset = [0,0];
 
 	(function init_assets(){
 		self.brown = 0x77543c;
@@ -264,8 +275,8 @@ function Terrain(){
 
 	this.render_tiles = function(tilemap, tilemap_index){
 
-		var origin_x = (index_to_coords(tilemap_index)[0] - origin[0]) * terrain.tile_width;
-		var origin_z = (index_to_coords(tilemap_index)[1] - origin[1]) * terrain.tile_width;
+		var origin_x = (index_to_coords(tilemap_index)[0] - start_origin[0]) * terrain.tile_width;
+		var origin_z = (index_to_coords(tilemap_index)[1] - start_origin[1]) * terrain.tile_width;
 
 		var geometry = new THREE.Geometry();
 
@@ -280,7 +291,7 @@ function Terrain(){
 				material_index = 0;
 			} else if(tilemap[i].height > 0.57 && tilemap[i].height < 0.6 ){
 				material_index = 6;
-				tmp_height = (tilemap[i].height - 0.57) * 10000000;
+				// tmp_height = (tilemap[i].height - 0.57) * 10000000;
 			}
 
 			// } else if(tilemap[i].height > 0.6 && tilemap[i].height < 0.7 ){
@@ -328,15 +339,17 @@ function UI(){
 	this.half_map = (cube_size * terrain.tile_width / 2);
 	this.buffer = 10;
 	this.tilemaps_shown = {
-		nw: false,
-		ne: false,
-		sw: false,
-		se: false,
+		// nw: false,
+		// ne: false,
+		// sw: false,
+		// se: false,
 		n: false,
 		s: false,
 		e: false,
 		w: false
 	};
+
+	this.is_updating = false;
 
 	this.visual_error = function(error_message){
 		$('.error_message_box .error_message').html(error_message);
@@ -395,9 +408,8 @@ function UI(){
 
 	}
 
-	this.check_chunks_loop = function(){
+	this.check_chunks = function(){
 		// return false;
-		var something = 400;
 		if(!terrain.map_ready){
 			return false;
 		}
@@ -415,6 +427,7 @@ function UI(){
 			this.tilemaps_shown.s = false;
 			this.tilemaps_shown.e = false;
 			this.tilemaps_shown.w = false;
+			console.log('n');
 		} else if(camera.position.x < 0 && camera.position.z > 0 && !this.tilemaps_shown.w){
 			scene.add( terrain.tilemaps[ origin_points()[1] ] );
 			scene.add( terrain.tilemaps[ origin_points()[2] ] );
@@ -428,6 +441,7 @@ function UI(){
 			this.tilemaps_shown.n = false;
 			this.tilemaps_shown.s = false;
 			this.tilemaps_shown.e = false;
+			console.log('w');
 		} else if(camera.position.x > 0 && camera.position.z > 0 && !this.tilemaps_shown.s){
 			scene.add( terrain.tilemaps[ origin_points()[5] ] );
 			scene.add( terrain.tilemaps[ origin_points()[7] ] );
@@ -476,39 +490,75 @@ function UI(){
 	this.translate_map = function(difference_x, difference_z){
 		camera.position.x += difference_x;
 		camera.position.z += difference_z;
-// console.log(camera.position);
-		if(camera.position.x >= this.half_map + this.buffer){
-			this.load_chunk(0,-1); // NW
-		} else if(camera.position.z >= this.half_map + this.buffer) {
-			this.load_chunk(1,-1); // NE
-		} else if(camera.position.x <= -this.half_map - this.buffer) {
-			this.load_chunk(0,1); // SW
-		} else if(camera.position.z <= -this.half_map - this.buffer) {
-			this.load_chunk(1,1); // SE
-		}
+
+
+		// if( Math.abs(pointer.position.x - 10) > (terrain.tile_width * cube_size / 2) ){
+			// var new_origin = Array();
+
+
+			var tmp_origin = Array();
+			tmp_origin[0] = start_origin[0] + ((Math.round( (camera.position.x - 10) / (cube_size * terrain.tile_width) ) * cube_size * terrain.tile_width) / terrain.tile_width);
+			tmp_origin[1] = start_origin[1] + ((Math.round( (camera.position.z - 10) / (cube_size * terrain.tile_width) ) * cube_size * terrain.tile_width) / terrain.tile_width);
+
+			if(tmp_origin[0] != origin[0] || tmp_origin[1] != origin[1]){
+				origin = tmp_origin;
+				origin_point = coords_to_index( origin );
+
+				console.log('new_origin');
+
+				scene.add( terrain.tilemaps[ origin_points()[4] ] );
+
+				this.tilemaps_shown.n = false;
+				this.tilemaps_shown.s = false;
+				this.tilemaps_shown.e = false;
+				this.tilemaps_shown.w = false;
+			}
+
+		// }
+
+		this.check_chunks();
+
+		// if(camera.position.x >= this.half_map + this.buffer){
+		// 	this.load_chunk(0,-1); // NW
+		// } else if(camera.position.z >= this.half_map + this.buffer) {
+		// 	this.load_chunk(1,-1); // NE
+		// } else if(camera.position.x <= -this.half_map - this.buffer) {
+		// 	this.load_chunk(0,1); // SW
+		// } else if(camera.position.z <= -this.half_map - this.buffer) {
+		// 	this.load_chunk(1,1); // SE
+		// }
+
+		// if( (terrain.tile_width * cube_size / 2) - Math.abs(camera.position.x) <= 0 && !this.is_updating){
+		// 	console.log(this.is_updating);
+		// 	this.is_updating = true;
+
+		// 	// origin_point = origin_points()[7];
+		// 	// origin = index_to_coords(origin_point);
+
+		// 	// network.get_map_data( origin_points() );
+
+		// 	this.load_chunk(0, 1);
+		// }
 	}
 
 	this.load_chunk = function(direction, value){
 		// console.log(direction, value);
+		origin[direction] += cube_size * value;
+		origin_point = coords_to_index(origin);
+		var new_origin_points = origin_points();
+		var points_to_get = Array();
+
+		// Determine which chunks we don't currently have cached
+		for(var i in new_origin_points ){
+			if( typeof(terrain.tilemaps[new_origin_points[i]]) == 'undefined' ){
+				points_to_get.push( new_origin_points[i] );
+			}
+		}
+
+		// console.log(points_to_get);
+		network.get_map_data( points_to_get );
+
 	}
-
-	// $('#'+this.ui_id).mouseup(function(e){
-	// 	self.mouse_is_down = false;
-
-	// 	if(self.is_click && typeof(self.click_callback) == 'function'){
-	// 		var iso_coords = self.iso_to_cartesian( [e.pageX, e.pageY] );
-	// 		iso_coords[0] = Math.floor( (iso_coords[0] - self.translation[0]) / terrain.tile_width) * terrain.tile_width;
-	// 		iso_coords[1] = Math.floor( (iso_coords[1] - self.translation[1]) / terrain.tile_width) * terrain.tile_width;
-
-	// 		var true_coords = Array();
-	// 		true_coords[0] = (iso_coords[0]/terrain.tile_width) + (cube_size/2) + origin[0];
-	// 		true_coords[1] = (iso_coords[1]/terrain.tile_width) + (cube_size/2) + origin[1];
-
-	// 		self.click_callback(true_coords);
-	// 		self.click_callback = null;
-	// 	}
-
-	// });
 
 	this.pan_listener = function(){
 		$(renderer.domElement).mousemove(function(e){
