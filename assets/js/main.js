@@ -181,7 +181,8 @@ function Network(){
 
 	ws.onopen = function(){
 		init_socket_connect = true;
-		self.get_map_data( origin_point, 2 );
+		self.get_map_data( origin_point, 1 );
+		// self.get_map_data( origin_point, 4 );
 	};
 
 	this.get_map_data = function(origin_point, distance){
@@ -414,7 +415,11 @@ function UI(){
 			return false;
 		}
 
-		if(camera.position.x < 0 && camera.position.z < 0 && !this.tilemaps_shown.n){
+		var camera_offset = Array();
+		camera_offset[0] = ( camera.position.x + ((start_origin[0] - origin[0]) * terrain.tile_width) );
+		camera_offset[1] = ( camera.position.z + ((start_origin[1] - origin[1]) * terrain.tile_width) );
+
+		if(camera_offset[0] < 0 && camera_offset[1] < 0 && !this.tilemaps_shown.n){
 			scene.add( terrain.tilemaps[ origin_points()[0] ] );
 			scene.add( terrain.tilemaps[ origin_points()[1] ] );
 			scene.add( terrain.tilemaps[ origin_points()[3] ] );
@@ -427,8 +432,8 @@ function UI(){
 			this.tilemaps_shown.s = false;
 			this.tilemaps_shown.e = false;
 			this.tilemaps_shown.w = false;
-			console.log('n');
-		} else if(camera.position.x < 0 && camera.position.z > 0 && !this.tilemaps_shown.w){
+			// console.log('n');
+		} else if(camera_offset[0] < 0 && camera_offset[1] > 0 && !this.tilemaps_shown.w){
 			scene.add( terrain.tilemaps[ origin_points()[1] ] );
 			scene.add( terrain.tilemaps[ origin_points()[2] ] );
 			scene.add( terrain.tilemaps[ origin_points()[5] ] );
@@ -441,8 +446,8 @@ function UI(){
 			this.tilemaps_shown.n = false;
 			this.tilemaps_shown.s = false;
 			this.tilemaps_shown.e = false;
-			console.log('w');
-		} else if(camera.position.x > 0 && camera.position.z > 0 && !this.tilemaps_shown.s){
+			// console.log('w');
+		} else if(camera_offset[0] > 0 && camera_offset[1] > 0 && !this.tilemaps_shown.s){
 			scene.add( terrain.tilemaps[ origin_points()[5] ] );
 			scene.add( terrain.tilemaps[ origin_points()[7] ] );
 			scene.add( terrain.tilemaps[ origin_points()[8] ] );
@@ -455,7 +460,8 @@ function UI(){
 			this.tilemaps_shown.n = false;
 			this.tilemaps_shown.w = false;
 			this.tilemaps_shown.e = false;
-		} else if(camera.position.x > 0 && camera.position.z < 0 && !this.tilemaps_shown.e){
+			// console.log('s');
+		} else if(camera_offset[0] > 0 && camera_offset[1] < 0 && !this.tilemaps_shown.e){
 			scene.add( terrain.tilemaps[ origin_points()[3] ] );
 			scene.add( terrain.tilemaps[ origin_points()[6] ] );
 			scene.add( terrain.tilemaps[ origin_points()[7] ] );
