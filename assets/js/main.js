@@ -186,9 +186,23 @@ function Network(){
 	};
 
 	this.get_map_data = function(origin_point, distance){
-		var map_params = {cube_size: cube_size, map_size: map_size, origin_point: origin_point, distance: distance};
+time_start('map_data');
+		var tmp_origin_points = Array();
+		var start_origin = origin_point - (map_size * cube_size * distance) - (cube_size * distance);
+		for(var ix = 0; ix < (distance * 2) + 1; ix++){
+			for(var iz = 0; iz < (distance * 2) + 1; iz++){
+				var tmp_index = start_origin + (map_size * cube_size * ix) + (iz * cube_size);
+
+				if( typeof(terrain.tilemaps[tmp_index]) != 'object' ){
+					tmp_origin_points.push(tmp_index);
+				} else {
+					cl('already got this one');
+				}
+			}
+		}
+
+		var map_params = {cube_size: cube_size, map_size: map_size, origin_points: tmp_origin_points};
 		ws.send( get_json({type:'get_map_data', map_params:map_params}) );
-		// console.log( origin_points() );
 	};
 
 	ws.onmessage = function (ret){
@@ -199,6 +213,7 @@ function Network(){
 
 			case 'map_data':
 				terrain.update_tilemaps(received_msg.tilemaps);
+				time_end('map_data');
 				break;
 
 			default:
@@ -499,71 +514,27 @@ function UI(){
 
 
 		// if( Math.abs(pointer.position.x - 10) > (terrain.tile_width * cube_size / 2) ){
-			// var new_origin = Array();
-
-
-			var tmp_origin = Array();
-			tmp_origin[0] = start_origin[0] + ((Math.round( (camera.position.x - 10) / (cube_size * terrain.tile_width) ) * cube_size * terrain.tile_width) / terrain.tile_width);
-			tmp_origin[1] = start_origin[1] + ((Math.round( (camera.position.z - 10) / (cube_size * terrain.tile_width) ) * cube_size * terrain.tile_width) / terrain.tile_width);
-
-			if(tmp_origin[0] != origin[0] || tmp_origin[1] != origin[1]){
-				origin = tmp_origin;
-				origin_point = coords_to_index( origin );
-
-				console.log('new_origin');
-
-				scene.add( terrain.tilemaps[ origin_points()[4] ] );
-
-				this.tilemaps_shown.n = false;
-				this.tilemaps_shown.s = false;
-				this.tilemaps_shown.e = false;
-				this.tilemaps_shown.w = false;
-			}
-
+		//	var new_origin = Array();
 		// }
 
-		this.check_chunks();
+		// Probably should make this origin check more cost effective
+		var tmp_origin = Array();
+		tmp_origin[0] = start_origin[0] + ((Math.round( (camera.position.x - 10) / (cube_size * terrain.tile_width) ) * cube_size * terrain.tile_width) / terrain.tile_width);
+		tmp_origin[1] = start_origin[1] + ((Math.round( (camera.position.z - 10) / (cube_size * terrain.tile_width) ) * cube_size * terrain.tile_width) / terrain.tile_width);
 
-		// if(camera.position.x >= this.half_map + this.buffer){
-		// 	this.load_chunk(0,-1); // NW
-		// } else if(camera.position.z >= this.half_map + this.buffer) {
-		// 	this.load_chunk(1,-1); // NE
-		// } else if(camera.position.x <= -this.half_map - this.buffer) {
-		// 	this.load_chunk(0,1); // SW
-		// } else if(camera.position.z <= -this.half_map - this.buffer) {
-		// 	this.load_chunk(1,1); // SE
-		// }
+		if(tmp_origin[0] != origin[0] || tmp_origin[1] != origin[1]){
+			origin = tmp_origin;
+			origin_point = coords_to_index( origin );
 
-		// if( (terrain.tile_width * cube_size / 2) - Math.abs(camera.position.x) <= 0 && !this.is_updating){
-		// 	console.log(this.is_updating);
-		// 	this.is_updating = true;
+			network.get_map_data(origin_point, 1);
 
-		// 	// origin_point = origin_points()[7];
-		// 	// origin = index_to_coords(origin_point);
-
-		// 	// network.get_map_data( origin_points() );
-
-		// 	this.load_chunk(0, 1);
-		// }
-	}
-
-	this.load_chunk = function(direction, value){
-		// console.log(direction, value);
-		origin[direction] += cube_size * value;
-		origin_point = coords_to_index(origin);
-		var new_origin_points = origin_points();
-		var points_to_get = Array();
-
-		// Determine which chunks we don't currently have cached
-		for(var i in new_origin_points ){
-			if( typeof(terrain.tilemaps[new_origin_points[i]]) == 'undefined' ){
-				points_to_get.push( new_origin_points[i] );
-			}
+			this.tilemaps_shown.n = false;
+			this.tilemaps_shown.s = false;
+			this.tilemaps_shown.e = false;
+			this.tilemaps_shown.w = false;
 		}
 
-		// console.log(points_to_get);
-		network.get_map_data( points_to_get );
-
+		this.check_chunks();
 	}
 
 	this.pan_listener = function(){

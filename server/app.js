@@ -44,17 +44,10 @@ wss.on('connection', function connection(ws) {
 			case 'get_map_data':
 				console.time('generate map');
 				var tilemaps = new Object();
-				var origin_point = parsed_message.map_params.origin_point;
-				var distance = parsed_message.map_params.distance;
-				var cube_size = parsed_message.map_params.cube_size;
 
-				var start_origin = origin_point - (map_size * cube_size * distance) - (cube_size * distance);
-
-				for(var ix = 0; ix < (distance * 2) + 1; ix++){
-					for(var iz = 0; iz < (distance * 2) + 1; iz++){
-						var tmp_index = start_origin + (map_size * cube_size * ix) + (iz * cube_size);
-						tilemaps[tmp_index] = generate_tilemap( parsed_message.map_params, tmp_index );
-					}
+				for(var i in parsed_message.map_params.origin_points){
+					var tmp_origin_point = parsed_message.map_params.origin_points[i];
+					tilemaps[tmp_origin_point] = generate_tilemap(parsed_message.map_params, tmp_origin_point);
 				}
 
 				ws.send( get_json( {type:'map_data', tilemaps: tilemaps} ) );
