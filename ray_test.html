@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title></title>
+	<link rel="stylesheet" type="text/css" href="assets/dist/all.min.css">
+</head>
+<body>
+
+<!--
+	<div class="canvases">
+		<canvas id="main" class="canvas"></canvas>
+	</div>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+-->
+	<script src="assets/js_libs/jquery.js"></script>
+	<script src="assets/js_libs/three.min.js"></script>
+	<script src="assets/js_libs/stats.js"></script>
+
+	<script>
+
+	$(document).ready(function(){
+		window.requestAnimFrame = (function(){
+			return window.requestAnimationFrame		||
+				window.webkitRequestAnimationFrame	||
+				window.mozRequestAnimationFrame		||
+				function( callback ){
+					window.setTimeout(callback, 1000 / 60);
+				};
+		})();
+
+		(function animloop(){
+			requestAnimFrame(animloop);
+
+			renderer.render( scene, camera );
+			stats.update();
+		})();
+	});
+
+		renderer = new THREE.WebGLRenderer();
+		renderer.setClearColor( 0xf0f0f0 );
+		renderer.setPixelRatio( window.devicePixelRatio );
+		renderer.setSize( window.innerWidth, window.innerHeight );
+
+		$(renderer.domElement).addClass('canvas');
+		$('body').append(renderer.domElement);
+
+		stats = new Stats();
+		stats.domElement.style.position = 'absolute';
+		stats.domElement.style.top = '0px';
+		$('body').append(stats.domElement);
+
+		scene = new THREE.Scene();
+
+		var aspect = window.innerWidth / window.innerHeight;
+		var d = 800;
+		camera = new THREE.OrthographicCamera( - d * aspect, d * aspect, d, - d, -2000, 2000 );
+		camera.position.set(-10, 8, -10);
+		camera.lookAt( scene.position );
+
+		var directionalLight = new THREE.DirectionalLight( 0xffffff );
+		directionalLight.position.x = Math.random() - 0.5;
+		directionalLight.position.y = 400;
+		directionalLight.position.z = Math.random() - 0.5;
+		directionalLight.position.normalize();
+		scene.add( directionalLight );
+
+		var brown = 0x77543c;
+		var green = 0x326800;
+		var blue = 0x254e78;
+
+		var material_array = [];
+		// Grass Block [0]
+		material_array.push( new THREE.MeshLambertMaterial( { color: brown } ) );
+		material_array.push( new THREE.MeshLambertMaterial( { color: brown } ) );
+		// material_array.push( new THREE.MeshLambertMaterial( { map: THREE.ImageUtils.loadTexture('assets/img/grass.jpg') } ) );
+		material_array.push( new THREE.MeshLambertMaterial( { color: green } ) );
+		material_array.push( new THREE.MeshLambertMaterial( { color: brown } ) );
+		material_array.push( new THREE.MeshLambertMaterial( { color: brown } ) );
+		material_array.push( new THREE.MeshLambertMaterial( { color: brown } ) );
+		material_array.push( new THREE.MeshLambertMaterial( { color: brown } ) );
+
+		// Water Block [7]
+		material_array.push( new THREE.MeshLambertMaterial( { map: THREE.ImageUtils.loadTexture('assets/img/water.jpg') } ) );
+		material_array.push( new THREE.MeshLambertMaterial( { map: THREE.ImageUtils.loadTexture('assets/img/water.jpg') } ) );
+		material_array.push( new THREE.MeshLambertMaterial( { map: THREE.ImageUtils.loadTexture('assets/img/water.jpg') } ) );
+		material_array.push( new THREE.MeshLambertMaterial( { map: THREE.ImageUtils.loadTexture('assets/img/water.jpg') } ) );
+		material_array.push( new THREE.MeshLambertMaterial( { map: THREE.ImageUtils.loadTexture('assets/img/water.jpg') } ) );
+		material_array.push( new THREE.MeshLambertMaterial( { map: THREE.ImageUtils.loadTexture('assets/img/water.jpg') } ) );
+		material_array.push( new THREE.MeshLambertMaterial( { map: THREE.ImageUtils.loadTexture('assets/img/water.jpg') } ) );
+
+		// Stone Block [14]
+		material_array.push( new THREE.MeshLambertMaterial( { map: THREE.ImageUtils.loadTexture('assets/img/stone.png') } ) );
+		material_array.push( new THREE.MeshLambertMaterial( { map: THREE.ImageUtils.loadTexture('assets/img/stone.png') } ) );
+		material_array.push( new THREE.MeshLambertMaterial( { map: THREE.ImageUtils.loadTexture('assets/img/stone.png') } ) );
+		material_array.push( new THREE.MeshLambertMaterial( { map: THREE.ImageUtils.loadTexture('assets/img/stone.png') } ) );
+		material_array.push( new THREE.MeshLambertMaterial( { map: THREE.ImageUtils.loadTexture('assets/img/stone.png') } ) );
+		material_array.push( new THREE.MeshLambertMaterial( { map: THREE.ImageUtils.loadTexture('assets/img/stone.png') } ) );
+		material_array.push( new THREE.MeshLambertMaterial( { map: THREE.ImageUtils.loadTexture('assets/img/stone.png') } ) );
+
+		var tile_materials = new THREE.MeshFaceMaterial(material_array);
+
+		var raycaster = new THREE.Raycaster();
+		var mouse = new THREE.Vector2();
+		var objects = [];
+		var rollOverGeo = new THREE.BoxGeometry( 50, 50, 50 );
+		var rollOverMaterial = new THREE.MeshBasicMaterial( { color: 0xff0000, opacity: 0.5, transparent: true } );
+		rollOverMesh = new THREE.Mesh( rollOverGeo, rollOverMaterial );
+		scene.add( rollOverMesh );
+
+		var cube_geometry = new THREE.BoxGeometry( 50, 50, 50 );
+
+		var geometry = new THREE.Geometry();
+		// var tmp_group = new THREE.Object3D();
+
+		var cube_size = 25;
+		for(var ix = 0; ix < cube_size; ix++){
+			for(var iz = 0; iz < cube_size; iz++){
+
+				var index = (Math.round(Math.random() * 2) * 7);
+				var tmp_cube = new THREE.Mesh( cube_geometry, tile_materials );
+				tmp_cube.position.x = (ix * 50) - (cube_size / 2 * 50);
+				tmp_cube.position.z = (iz * 50) - (cube_size / 2 * 50);
+				tmp_cube.position.y = 0;
+				tmp_cube.updateMatrix();
+				tmp_cube.matrixAutoUpdate = true;
+				// scene.add(tmp_cube);
+				geometry.merge( tmp_cube.geometry, tmp_cube.matrix, index );
+				// objects.push( tmp_cube );
+				// tmp_group.add( tmp_cube );
+			}
+		}
+
+		// scene.add( tmp_group );
+		// geometry.mergeVertices();
+		var finale = new THREE.Mesh( geometry, tile_materials );
+		scene.add( finale );
+
+		$(renderer.domElement).mousemove(function(event){
+
+			event.preventDefault();
+			mouse.set( ( event.clientX / window.innerWidth ) * 2 - 1, - ( event.clientY / window.innerHeight ) * 2 + 1 );
+			raycaster.setFromCamera( mouse, camera );
+
+			var intersects = raycaster.intersectObject( finale );
+
+			if ( intersects.length > 0 ) {
+				var intersect = intersects[ 1 ];
+				intersect.object.position.y += 10;
+console.log(intersects);
+return false;
+				// scene.remove( intersect.object );
+// console.log( intersect.object.position.x );
+				// rollOverMesh.position.copy( intersect.point ).add( intersect.face.normal );
+				// rollOverMesh.position.divideScalar( 50 ).floor().multiplyScalar( 50 ); //.addScalar( 0 );
+				// rollOverMesh.position.y -= 20;
+
+				rollOverMesh.position.x = intersect.object.position.x;
+				rollOverMesh.position.z = intersect.object.position.z;
+				rollOverMesh.position.y = 10;
+
+			}
+		});
+
+
+	</script>
+
+	<div class="error_message_box">
+		<div class="error_message"></div>
+	</div>
+</body>
+</html>
