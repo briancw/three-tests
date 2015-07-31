@@ -4,7 +4,6 @@ var doc_height = $(window).height() - $('.ui_container').height();
 // var doc_diagonal = Math.ceil(Math.sqrt( Math.pow(doc_width,2) + Math.pow(doc_height*2,2) ));
 // var iso_width = Math.sqrt( Math.pow(doc_width, 2) + Math.pow(doc_width/2, 2) );
 // var tile_width = 50;
-var do_rotate = location.search.split('rotate=')[1];
 var halt = location.search.split('halt=')[1];
 
 if(halt){
@@ -14,8 +13,8 @@ if(halt){
 // var cube_size = Math.round(doc_diagonal / tile_width * 1.5);
 
 // var cube_size = 18;
-// var cube_size = 60;
-var cube_size = 36;
+var cube_size = 20;
+// var cube_size = 36;
 var map_size = 2500000;
 var start_origin = [552648, 429251];
 var origin = [552648, 429251];
@@ -52,7 +51,7 @@ var terrain = new Terrain();
 init();
 var ui = new UI();
 // ui.click_listener();
-// ui.pan_listener();
+ui.pan_listener();
 ui.keyboard_listener();
 
 window.requestAnimFrame = (function(){
@@ -67,20 +66,6 @@ window.requestAnimFrame = (function(){
 (function animloop(){
 	requestAnimFrame(animloop);
 
-	if(do_rotate){
-		var timer = Date.now() * 0.0001;
-		camera.position.set(Math.cos( timer ) * 10, 7, Math.sin( timer ) * 10);
-		camera.lookAt( scene.position );
-	}
-
-	// camera.rotation.x += 0.001;
-
-	// camera.position.y -= Math.sin( timer ) * 10;
-	// camera.position.y -= 0.1;
-
-	// terrain.cube.rotation.x += 0.01;
-	// terrain.cube.rotation.y += 0.01;
-
 	ui.pan_map_loop();
 
 	pointer.position.x = camera.position.x;
@@ -88,8 +73,7 @@ window.requestAnimFrame = (function(){
 
 	renderer.render( scene, camera );
 	stats.update();
-	// cube.rotation.x += 0.01;
-	// cube.rotation.y += 0.01;
+
 })();
 
 var pointer;
@@ -118,6 +102,8 @@ function init(){
 	var aspect = window.innerWidth / window.innerHeight;
 	var d = 800;
 	camera = new THREE.OrthographicCamera( - d * aspect, d * aspect, d, - d, -2000, 2000 );
+	camera_rotation_x = Math.cos( Math.PI ) * 5;
+	camera_rotation_z = Math.cos( Math.PI / 2 ) * 5;
 	// camera.position.set(10, 8, 10);
 	camera.position.set(5, 5, 5);
 	camera.lookAt( scene.position );
@@ -138,7 +124,7 @@ function init(){
 	scene.add( terrain.sun_light );
 
 	pointer = new THREE.Mesh( new THREE.BoxGeometry(10,10,10), new THREE.MeshLambertMaterial({color:0x77543c}) );
-	pointer.position.set(0,50,0);
+	pointer.position.set(0,15,0);
 	scene.add(pointer);
 
 	// var pointLight = new THREE.PointLight(0xFFFFFF);
@@ -355,12 +341,17 @@ function UI(){
 	this.is_click = true;
 	this.pan_amount = 15;
 	this.half_map = (cube_size * terrain.tile_width / 2);
-	this.buffer = 10;
+
+	this.camera_coords = new THREE.Object3D;
+	this.camera_coords.position = camera.position;
+	this.rotate_amount = 22;
+	this.radius = camera.position.x;
+
+	this.raycaster = new THREE.Raycaster();
+	this.mouse = new THREE.Vector2();
+	this.objects = [];
+
 	this.tilemaps_shown = {
-		// nw: false,
-		// ne: false,
-		// sw: false,
-		// se: false,
 		n: false,
 		s: false,
 		e: false,
@@ -396,6 +387,7 @@ function UI(){
 		this.move_up = false;
 		this.move_up = false;
 		this.move_up = false;
+		this.rotate_right = false;
 
 		$(document).keydown(function(e){
 			if(e.keyCode == 87){ // Up
@@ -406,6 +398,12 @@ function UI(){
 				self.move_left = true;
 			} else if(e.keyCode == 68){ // Right
 				self.move_right = true;
+			}
+
+			if(e.keyCode == 69){ // E
+				self.rotate_right = true;
+			} else if(e.keyCode == 81){ // Q
+				self.rotate_left = true;
 			}
 
 		});
@@ -420,6 +418,12 @@ function UI(){
 				self.move_left = false;
 			} else if(e.keyCode == 68){ // Right
 				self.move_right = false;
+			}
+
+			if(e.keyCode == 69){ // E
+				self.rotate_right = false;
+			} else if(e.keyCode == 81){ // Q
+				self.rotate_left = false;
 			}
 
 		});
@@ -497,27 +501,43 @@ function UI(){
 	this.pan_map_loop = function(){
 
 		if( this.move_up ){
-			this.translate_map( -this.pan_amount, -this.pan_amount );
+			this.translate_map( -0, -this.pan_amount );
 		} else if( this.move_down ){
-			this.translate_map( this.pan_amount, this.pan_amount );
+			this.translate_map( 0, this.pan_amount );
 		}
 
 		if( this.move_left ){
-			this.translate_map( -this.pan_amount, this.pan_amount );
+			this.translate_map( -this.pan_amount, 0 );
 		} else if( this.move_right ){
-			this.translate_map( this.pan_amount, -this.pan_amount );
+			this.translate_map( this.pan_amount, -0 );
 		}
+
+		if( this.rotate_right ){
+
+			this.rotate_amount ++;
+			camera.position.x = (Math.cos( this.rotate_amount/30 ) * this.radius) + this.camera_coords.position.x;
+			camera.position.z = (Math.sin( this.rotate_amount/30 ) * this.radius) + this.camera_coords.position.z;
+			camera.lookAt( new THREE.Vector3( this.camera_coords.position.x, 0, this.camera_coords.position.z) );
+
+		} else if( this.rotate_left ){
+
+			this.rotate_amount --;
+			camera.position.x = (Math.cos( this.rotate_amount/30 ) * this.radius) + this.camera_coords.position.x;
+			camera.position.z = (Math.sin( this.rotate_amount/30 ) * this.radius) + this.camera_coords.position.z;
+			camera.lookAt( new THREE.Vector3( this.camera_coords.position.x, 0, this.camera_coords.position.z) );
+
+		}
+
 
 	}
 
 	this.translate_map = function(difference_x, difference_z){
-		camera.position.x += difference_x;
-		camera.position.z += difference_z;
+		camera.translateX( difference_x );
+		camera.translateZ( difference_z * 1.5 );
+		camera.position.y = 5;
 
-
-		// if( Math.abs(pointer.position.x - 10) > (terrain.tile_width * cube_size / 2) ){
-		//	var new_origin = Array();
-		// }
+		this.camera_coords.position.x = camera.position.x;
+		this.camera_coords.position.z = camera.position.z;
 
 		// Probably should make this origin check more cost effective
 		var tmp_origin = Array();
@@ -528,7 +548,7 @@ function UI(){
 			origin = tmp_origin;
 			origin_point = coords_to_index( origin );
 
-			network.get_map_data(origin_point, 1);
+			network.get_map_data(origin_point, 2);
 
 			this.tilemaps_shown.n = false;
 			this.tilemaps_shown.s = false;
@@ -540,6 +560,28 @@ function UI(){
 	}
 
 	this.pan_listener = function(){
+		$(renderer.domElement).mousemove(function(event){
+
+			event.preventDefault();
+			self.mouse.set( ( event.clientX / window.innerWidth ) * 2 - 1, - ( event.clientY / window.innerHeight ) * 2 + 1 );
+			self.raycaster.setFromCamera( self.mouse, camera );
+
+			var intersects = self.raycaster.intersectObjects( self.objects );
+
+				cl(intersects);
+			if ( intersects.length > 0 ) {
+
+				var intersect = intersects[ 0 ];
+return false;
+
+				rollOverMesh.position.copy( intersect.point ).add( intersect.face.normal );
+				rollOverMesh.position.divideScalar( 50 ).floor().multiplyScalar( 50 ).addScalar( 25 );
+
+			}
+		});
+
+		// render();
+/*
 		$(renderer.domElement).mousemove(function(e){
 			self.is_click = false;
 
@@ -561,6 +603,8 @@ function UI(){
 				self.last_y = mouse_coords[1];
 			}
 		});
+*/
+
 	}
 
 	this.iso_to_cartesian = function(coords){
