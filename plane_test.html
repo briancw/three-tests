@@ -71,7 +71,8 @@
 		var material_array = [];
 		// Grass Block [0]
 		material_array.push( new THREE.MeshLambertMaterial( { color: brown } ) );
-		material_array.push( new THREE.MeshLambertMaterial( { color: brown } ) );
+		material_array.push( new THREE.MeshLambertMaterial( { color: green } ) );
+/*
 		// material_array.push( new THREE.MeshLambertMaterial( { map: THREE.ImageUtils.loadTexture('assets/img/grass.jpg') } ) );
 		material_array.push( new THREE.MeshLambertMaterial( { color: green } ) );
 		material_array.push( new THREE.MeshLambertMaterial( { color: brown } ) );
@@ -96,7 +97,7 @@
 		material_array.push( new THREE.MeshLambertMaterial( { map: THREE.ImageUtils.loadTexture('assets/img/stone.png') } ) );
 		material_array.push( new THREE.MeshLambertMaterial( { map: THREE.ImageUtils.loadTexture('assets/img/stone.png') } ) );
 		material_array.push( new THREE.MeshLambertMaterial( { map: THREE.ImageUtils.loadTexture('assets/img/stone.png') } ) );
-
+*/
 		var tile_materials = new THREE.MeshFaceMaterial(material_array);
 
 		// var raycaster = new THREE.Raycaster();
@@ -112,23 +113,31 @@
 		// tile_mesh.position.set( 10, 10, 10 );
 		// scene.add( tile_mesh );
 
-		var geometry = new THREE.PlaneGeometry( 1000, 500, 1 );
+		var geometry = new THREE.PlaneGeometry( 1000, 500, 5, 5 );
 		// var material = new THREE.MeshBasicMaterial( {color: 0xffff00, side: THREE.DoubleSide} );
-		var material = new THREE.MeshLambertMaterial( {color: 0xffff00, side: THREE.DoubleSide} );
-		var plane = new THREE.Mesh( geometry, material );
+		// var material = new THREE.MeshLambertMaterial( {color: 0xffff00 } );
 
-		plane.rotateX( (Math.PI / 180) * 90 );
+		var plane = new THREE.Mesh( geometry, tile_materials );
+
+		for(var i = 0; i < plane.geometry.faces.length / 2; i++){
+			plane.geometry.faces[i].materialIndex = Math.round(Math.random());
+			plane.geometry.faces[i + 1].materialIndex = Math.round(Math.random());
+		}
+
+
+		plane.rotateX( (Math.PI / 180) * -90 );
 		plane.updateMatrix();
 		plane.position.y += 50;
 
-		for(var i = 0; i < plane.geometry.vertices.length; i++){
+
+		// for(var i = 0; i < plane.geometry.vertices.length; i++){
 			// console.log( plane.geometry.vertices[i] );
 			// plane.geometry.vertices[i].z += Math.random() * 100;
-		}
-		plane.geometry.vertices[0].z = 300;
-		plane.geometry.vertices[1].z = 10;
-		plane.geometry.vertices[2].z = 10;
-		plane.geometry.vertices[3].z = 10;
+		// }
+		// plane.geometry.vertices[0].z = 300;
+		// plane.geometry.vertices[1].z = 10;
+		// plane.geometry.vertices[2].z = 10;
+		// plane.geometry.vertices[3].z = 10;
 
 		scene.add( plane );
 

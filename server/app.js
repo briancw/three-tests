@@ -106,12 +106,13 @@ function generate_tilemap(map_params, origin_point){
 	var start_y = origin_point - (start_x * map_size);
 
 	var scale = cube_size / map_size;
-	var local_x = 0;
+	var local_y = 0;
 
-	for(x = start_x; x < cube_size + start_x; x++){
-		var local_y = 0;
+	for(y = start_y; y < cube_size + start_y; y++){
 
-		for(y = start_y; y < cube_size + start_y; y++){
+		var local_x = 0;
+
+		for(x = start_x; x < cube_size + start_x; x++){
 
 			nx = Math.cos( ((x/cube_size) * scale) * 2 * Math.PI );
 			ny = Math.cos( ((y/cube_size) * scale) * 2 * Math.PI );
@@ -134,10 +135,10 @@ function generate_tilemap(map_params, origin_point){
 			// 	tilemap.mountain.tiles.push( {height: tmp_elevation, x: local_x, y: local_y} );
 			// }
 
-			local_y++;
+			local_x++;
 		}
 
-		local_x++;
+		local_y++;
 	}
 
 	return tilemap;
