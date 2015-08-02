@@ -1,15 +1,8 @@
-var camera, scene, renderer, controls;
+var camera, scene, renderer, stats, rstats;
 var doc_width = $(window).width();
 var doc_height = $(window).height() - $('.ui_container').height();
-// var doc_diagonal = Math.ceil(Math.sqrt( Math.pow(doc_width,2) + Math.pow(doc_height*2,2) ));
-// var iso_width = Math.sqrt( Math.pow(doc_width, 2) + Math.pow(doc_width/2, 2) );
-// var tile_width = 50;
-var halt = location.search.split('halt=')[1];
-var auto_pan = location.search.split('auto_pan=')[1];
 
-if(halt){
- catch_fire
-}
+var auto_pan = location.search.split('auto_pan=')[1];
 
 // var cube_size = Math.round(doc_diagonal / tile_width * 1.5);
 
@@ -18,7 +11,7 @@ var cube_size = 36;
 var map_size = 2500000;
 var start_origin = [552648, 429251];
 var origin = [552648, 429251];
-// origin[0] += 20;
+
 var origin_point = coords_to_index(origin);
 
 function coords_to_index(coords){
@@ -48,9 +41,11 @@ function origin_points(){
 
 var network = new Network();
 var terrain = new Terrain();
+var models = new Models();
+
 init();
+
 var ui = new UI();
-// ui.click_listener();
 ui.mouse_listeners();
 ui.keyboard_listener();
 
@@ -77,12 +72,15 @@ window.requestAnimFrame = (function(){
 
 	renderer.render( scene, camera );
 	stats.update();
+	rstats.update(renderer);
 
 })();
 
 var pointer;
 
 function init(){
+	models.load_model('assets/models/factory.json', 'factory');
+
 	renderer = new THREE.WebGLRenderer();
 	renderer.setClearColor( 0xf0f0f0 );
 	renderer.setPixelRatio( window.devicePixelRatio );
@@ -95,6 +93,12 @@ function init(){
 	stats.domElement.style.position = 'absolute';
 	stats.domElement.style.top = '0px';
 	$('body').append(stats.domElement);
+
+	rstats = new THREEx.RendererStats();
+	rstats.domElement.style.position = 'absolute';
+	rstats.domElement.style.left = '0px';
+	rstats.domElement.style.bottom = '0px';
+	$('body').append( rstats.domElement );
 
 	// camera = new THREE.OrthographicCamera( window.innerWidth / - 2, window.innerWidth / 2, window.innerHeight / 2, window.innerHeight / - 2, -2000, 2000 );
 	// camera.position.x = 200;
@@ -111,9 +115,6 @@ function init(){
 	// camera.position.set(10, 8, 10);
 	camera.position.set(5, 5, 5);
 	camera.lookAt( scene.position );
-
-	// controls = new THREE.OrbitControls( camera );
-	// controls.damping = 0.2;
 
 	// Lights
 
@@ -133,6 +134,18 @@ function init(){
 	pointer.position.set(0,15,0);
 	scene.add(pointer);
 
+	setTimeout(function(){
+		for(var i = 0; i < 100; i++){
+			// for(var i2 = 0; i2 < 10; i2++){
+				var tmp_mesh = models.models.factory.clone();
+				tmp_mesh.position.x = (Math.random() * cube_size * terrain.tile_width) + 500;
+				tmp_mesh.position.z = (Math.random() * cube_size * terrain.tile_width) + 500;
+				tmp_mesh.rotateY( (Math.random() * 360) * (Math.PI / 180) );
+
+				scene.add( tmp_mesh );
+			// }
+		}
+	}, 2000);
 	// var pointLight = new THREE.PointLight(0xFFFFFF);
 	// pointLight.position.x = 0;
 	// pointLight.position.y = 200;
@@ -260,8 +273,7 @@ function Terrain(){
 		// material_array.push( new THREE.MeshLambertMaterial( { map: THREE.ImageUtils.loadTexture('assets/img/grass.jpg') } ) );
 
 		var material_array = [];
-		material_array.push( new THREE.MeshBasicMaterial({ map: self.water }) );
-		// material_array.push( new THREE.MeshLambertMaterial({ color: self.green }) );
+		material_array.push( new THREE.MeshBasicMaterial({ color: self.blue }) );
 		material_array.push( new THREE.MeshBasicMaterial( { map: self.grass } ) );
 		material_array.push( new THREE.MeshLambertMaterial({ color: self.brown }) );
 
@@ -319,8 +331,8 @@ function Terrain(){
 		chunk.rotateX( Math.PI / 180 * -90 );
 		chunk.position.x = origin_x;
 		chunk.position.z = origin_z;
-		chunk.position.x *= 1.01;
-		chunk.position.z *= 1.01;
+		// chunk.position.x *= 1.01;
+		// chunk.position.z *= 1.01;
 
 		chunk.is_chunk = true;
 
@@ -342,6 +354,7 @@ function UI(){
 	this.last_y;
 	this.is_click = true;
 	this.pan_amount = 15;
+	this.camera_zoom = 1;
 
 	this.camera_coords = new THREE.Object3D;
 	this.camera_coords.position = camera.position;
@@ -447,6 +460,15 @@ function UI(){
 				console.log( intersect_point[1] );
 			}
 
+		});
+
+		$(renderer.domElement).on('mousewheel', function(event) {
+			// console.log(event.deltaX, event.deltaY, event.deltaFactor);
+			self.camera_zoom += (event.deltaY/15);
+			self.camera_zoom = self.camera_zoom > 8 ? 8 : self.camera_zoom;
+			self.camera_zoom = self.camera_zoom < 1 ? 1 : self.camera_zoom;
+			camera.zoom = self.camera_zoom;
+			camera.updateProjectionMatrix();
 		});
 
 	}
@@ -572,6 +594,9 @@ function UI(){
 	}
 
 	this.translate_map = function(difference_x, difference_z){
+		difference_x /= this.camera_zoom;
+		difference_z /= this.camera_zoom;
+
 		camera.translateX( difference_x );
 		camera.translateZ( difference_z * 1.5 );
 		camera.position.y = 5;
@@ -608,6 +633,23 @@ function UI(){
 				this.active_chunks.push( scene.children[i] );
 			}
 		}
+	}
+
+}
+
+function Models(){
+	this.loader = new THREE.JSONLoader();
+	this.models = {};
+	var self = this;
+
+	this.load_model = function(load_path, model_name){
+		this.loader.load(load_path, function(geometry, material){
+			console.log(geometry, material);
+			material = new THREE.MeshLambertMaterial({color: 0x555555});
+			var tmp_mesh = new THREE.Mesh(geometry, material);
+			self.models[model_name] = tmp_mesh;
+			scene.add( tmp_mesh );
+		});
 	}
 
 }
