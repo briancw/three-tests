@@ -51,7 +51,7 @@ var terrain = new Terrain();
 init();
 var ui = new UI();
 // ui.click_listener();
-ui.pan_listener();
+ui.mouse_listeners();
 ui.keyboard_listener();
 
 window.requestAnimFrame = (function(){
@@ -196,6 +196,9 @@ function Network(){
 		if( tmp_origin_points.length ){
 			var map_params = {cube_size: cube_size, map_size: map_size, origin_points: tmp_origin_points};
 			ws.send( get_json({type:'get_map_data', map_params:map_params}) );
+		} else {
+			// No new map data, update ui
+			ui.update_active_chunks();
 		}
 	};
 
@@ -271,15 +274,14 @@ function Terrain(){
 	this.update_tilemaps = function(tilemaps){
 
 		for(var i in tilemaps){
-			// this.tilemaps[i] = tilemaps[i];
-
-			console.log(i);
+			// console.log(i);
 			this.tilemaps[i] = Array();
 			this.render_tiles(tilemaps[i], i);
 		}
 
 		this.draw_tilemap( this.tilemaps[origin_point] );
 		this.map_ready = true;
+		ui.update_active_chunks();
 	}
 
 	this.render_tiles = function(tilemap, tilemap_index){
@@ -317,10 +319,12 @@ function Terrain(){
 		chunk.rotateX( Math.PI / 180 * -90 );
 		chunk.position.x = origin_x;
 		chunk.position.z = origin_z;
+		chunk.position.x *= 1.01;
+		chunk.position.z *= 1.01;
+
+		chunk.is_chunk = true;
 
 		this.tilemaps[tilemap_index] = chunk;
-		ui.objects.push(chunk);
-
 	}
 
 	this.draw_tilemap = function(tilemap){
@@ -338,7 +342,6 @@ function UI(){
 	this.last_y;
 	this.is_click = true;
 	this.pan_amount = 15;
-	this.half_map = (cube_size * terrain.tile_width / 2);
 
 	this.camera_coords = new THREE.Object3D;
 	this.camera_coords.position = camera.position;
@@ -347,7 +350,7 @@ function UI(){
 
 	this.raycaster = new THREE.Raycaster();
 	this.mouse = new THREE.Vector2();
-	this.objects = [];
+	this.active_chunks = [];
 
 	this.tilemaps_shown = {
 		n: false,
@@ -365,19 +368,6 @@ function UI(){
 		setTimeout(function(){
 			$('.error_message_box').fadeOut(500);
 		}, 3000);
-	}
-
-	this.click_listener = function(){
-		$(renderer.domElement).mousedown(function(e){
-			if(e.which === 1){
-				var mouse_coords = self.iso_to_cartesian([e.pageX, e.pageY]);
-
-				self.last_x = mouse_coords[0];
-				self.last_y = mouse_coords[1];
-				self.mouse_is_down = true;
-				self.is_click = true;
-			}
-		});
 	}
 
 	this.keyboard_listener = function(){
@@ -428,8 +418,56 @@ function UI(){
 
 	}
 
+	this.mouse_listeners = function(){
+		var rollOverGeo = new THREE.BoxGeometry( terrain.tile_width, 1, terrain.tile_width );
+		var rollOverMaterial = new THREE.MeshBasicMaterial( { color: 0xff0000, opacity: 0.5, transparent: true } );
+		this.rollOverMesh = new THREE.Mesh( rollOverGeo, rollOverMaterial );
+		this.rollOverMesh.position.y = 0;
+		scene.add( this.rollOverMesh );
+
+		$(renderer.domElement).mousemove(function(event){
+			event.preventDefault();
+
+			self.is_click = false;
+
+			var intersect_point = self.raycast(event);
+			if( typeof(intersect_point) != 'undefined' ){
+				self.rollOverMesh.position.copy( intersect_point[0] )
+				self.rollOverMesh.position.y = 0.1;
+				self.rollOverMesh.visible = true;
+			}
+
+		});
+
+		$(renderer.domElement).click(function(event){
+			event.preventDefault();
+
+			var intersect_point = self.raycast(event);
+			if( typeof(intersect_point) != 'undefined' ){
+				console.log( intersect_point[1] );
+			}
+
+		});
+
+	}
+
+	this.raycast = function(event){
+		self.mouse.set( ( event.clientX / window.innerWidth ) * 2 - 1, - ( event.clientY / window.innerHeight ) * 2 + 1 );
+		self.raycaster.setFromCamera( self.mouse, camera );
+
+		var intersects = self.raycaster.intersectObjects( self.active_chunks );
+
+		if ( intersects.length > 0 ) {
+			var intersect = intersects[ 0 ];
+
+			var intersect_point = intersect.point.divideScalar(terrain.tile_width).floor().multiplyScalar(terrain.tile_width).addScalar( terrain.tile_width/2 );
+			var output_point = [intersect_point.x - (terrain.tile_width/4), intersect_point.z - (terrain.tile_width/4)];
+			var true_coords = [output_point[0] + origin[0], output_point[1] + origin[1]];
+			return [intersect_point, true_coords];
+		}
+	}
+
 	this.check_chunks = function(){
-		// return false;
 		if(!terrain.map_ready){
 			return false;
 		}
@@ -451,7 +489,8 @@ function UI(){
 			this.tilemaps_shown.s = false;
 			this.tilemaps_shown.e = false;
 			this.tilemaps_shown.w = false;
-			// console.log('n');
+
+			var chunks_updated = true;
 		} else if(camera_offset[0] < 0 && camera_offset[1] > 0 && !this.tilemaps_shown.w){
 			scene.add( terrain.tilemaps[ origin_points()[1] ] );
 			scene.add( terrain.tilemaps[ origin_points()[2] ] );
@@ -465,7 +504,8 @@ function UI(){
 			this.tilemaps_shown.n = false;
 			this.tilemaps_shown.s = false;
 			this.tilemaps_shown.e = false;
-			// console.log('w');
+
+			var chunks_updated = true;
 		} else if(camera_offset[0] > 0 && camera_offset[1] > 0 && !this.tilemaps_shown.s){
 			scene.add( terrain.tilemaps[ origin_points()[5] ] );
 			scene.add( terrain.tilemaps[ origin_points()[7] ] );
@@ -479,7 +519,8 @@ function UI(){
 			this.tilemaps_shown.n = false;
 			this.tilemaps_shown.w = false;
 			this.tilemaps_shown.e = false;
-			// console.log('s');
+
+			var chunks_updated = true;
 		} else if(camera_offset[0] > 0 && camera_offset[1] < 0 && !this.tilemaps_shown.e){
 			scene.add( terrain.tilemaps[ origin_points()[3] ] );
 			scene.add( terrain.tilemaps[ origin_points()[6] ] );
@@ -493,6 +534,12 @@ function UI(){
 			this.tilemaps_shown.n = false;
 			this.tilemaps_shown.s = false;
 			this.tilemaps_shown.w = false;
+
+			var chunks_updated = true;
+		}
+
+		if(chunks_updated){
+			this.update_active_chunks();
 		}
 	}
 
@@ -511,22 +558,17 @@ function UI(){
 		}
 
 		if( this.rotate_right ){
-
 			this.rotate_amount ++;
 			camera.position.x = (Math.cos( this.rotate_amount/30 ) * this.radius) + this.camera_coords.position.x;
 			camera.position.z = (Math.sin( this.rotate_amount/30 ) * this.radius) + this.camera_coords.position.z;
 			camera.lookAt( new THREE.Vector3( this.camera_coords.position.x, 0, this.camera_coords.position.z) );
 
 		} else if( this.rotate_left ){
-
 			this.rotate_amount --;
 			camera.position.x = (Math.cos( this.rotate_amount/30 ) * this.radius) + this.camera_coords.position.x;
 			camera.position.z = (Math.sin( this.rotate_amount/30 ) * this.radius) + this.camera_coords.position.z;
 			camera.lookAt( new THREE.Vector3( this.camera_coords.position.x, 0, this.camera_coords.position.z) );
-
 		}
-
-
 	}
 
 	this.translate_map = function(difference_x, difference_z){
@@ -536,6 +578,8 @@ function UI(){
 
 		this.camera_coords.position.x = camera.position.x;
 		this.camera_coords.position.z = camera.position.z;
+
+		this.rollOverMesh.visible = false;
 
 		// Probably should make this origin check more cost effective
 		var tmp_origin = Array();
@@ -557,70 +601,13 @@ function UI(){
 		this.check_chunks();
 	}
 
-	this.pan_listener = function(){
-		var rollOverGeo = new THREE.BoxGeometry( 50, 50, 50 );
-		var rollOverMaterial = new THREE.MeshBasicMaterial( { color: 0xff0000, opacity: 0.5, transparent: true } );
-		this.rollOverMesh = new THREE.Mesh( rollOverGeo, rollOverMaterial );
-		scene.add( this.rollOverMesh );
-
-		$(renderer.domElement).mousemove(function(event){
-
-			event.preventDefault();
-			self.mouse.set( ( event.clientX / window.innerWidth ) * 2 - 1, - ( event.clientY / window.innerHeight ) * 2 + 1 );
-			self.raycaster.setFromCamera( self.mouse, camera );
-
-			var intersects = self.raycaster.intersectObjects( self.objects );
-
-				cl(intersects);
-			if ( intersects.length > 0 ) {
-
-				var intersect = intersects[ 0 ];
-
-				self.rollOverMesh.position.copy( intersect.point ).add( intersect.face.normal );
-				self.rollOverMesh.position.divideScalar( 50 ).floor().multiplyScalar( 50 ).addScalar( 25 );
-return false;
-
+	this.update_active_chunks = function(){
+		this.active_chunks = [];
+		for(var i in scene.children){
+			if( scene.children[i].type == 'Mesh' && scene.children[i].is_chunk ){
+				this.active_chunks.push( scene.children[i] );
 			}
-		});
-
-		// render();
-/*
-		$(renderer.domElement).mousemove(function(e){
-			self.is_click = false;
-
-			if(self.mouse_is_down){
-
-				if(e.which === 0){
-					self.mouse_is_down = false;
-					return false;
-				}
-
-				var mouse_coords = self.iso_to_cartesian([e.pageX, e.pageY]);
-				var tmp_difference_x = mouse_coords[0] - self.last_x;
-				var tmp_difference_y = mouse_coords[1] - self.last_y;
-
-				camera.position.x -= tmp_difference_x;
-				camera.position.z -= tmp_difference_y;
-
-				self.last_x = mouse_coords[0];
-				self.last_y = mouse_coords[1];
-			}
-		});
-*/
-
+		}
 	}
 
-	this.iso_to_cartesian = function(coords){
-		var angle = -45 * Math.PI / 180;
-		var x = coords[0] - (doc_width/2);
-		var y = (coords[1] - (doc_height/2)) * 2;
-
-		var cos = Math.cos(angle);
-		var sin = Math.sin(angle);
-
-		var new_x = x*cos - y*sin;
-		var new_y = x*sin + y*cos;
-
-		return [Math.round(new_x), Math.round(new_y)];
-	}
 }
