@@ -23,6 +23,11 @@ fast_simplex.octaves = 12;
 fast_simplex.frequency = 0.315;
 fast_simplex.persistence = 0.5;
 
+var forrest_simplex = new FastSimplexNoise({random: random});
+forrest_simplex.octaves = 12;
+forrest_simplex.frequency = 0.05;
+// forrest_simplex.persistence = 1;
+
 var map_size = 2500000;
 
 // var authenticated_users = Object();
@@ -52,6 +57,15 @@ wss.on('connection', function connection(ws) {
 
 				ws.send( get_json( {type:'map_data', tilemaps: tilemaps} ) );
 				console.timeEnd('generate map');
+				break;
+
+			case 'world_map_data':
+				console.time('g');
+				// console.log(parsed_message)
+				var world_tilemap = generate_tilemap( {map_size: parsed_message.map_size, cube_size: parsed_message.cube_size}, parsed_message.origin );
+				// console.log(world_tilemap.length)
+				console.timeEnd('g');
+				ws.send( get_json( {type:'world_map_data', world_tilemap: world_tilemap} ));
 				break;
 
 			default:
@@ -119,21 +133,28 @@ function generate_tilemap(map_params, origin_point){
 			nz = Math.sin( ((x/cube_size) * scale) * 2 * Math.PI );
 			nw = Math.sin( ((y/cube_size) * scale) * 2 * Math.PI );
 
-			var tmp_elevation = fast_simplex.get4DNoise(nx,ny,nz,nw) + 0.55;
+			var elevation = fast_simplex.get4DNoise(nx,ny,nz,nw) + 0.55;
+			var forrest_density = 0;
+			if(elevation > 0.57){
+				forrest_density = forrest_simplex.get2DNoise(local_x, local_y);
+			}
 
-			tilemap.push( {height: tmp_elevation, x: local_x, z: local_y} );
+			var tile_data = {height: elevation, x: local_x, z: local_y};
+			tile_data.forrest_density = forrest_density;
 
-			// if(tmp_elevation > 0 && tmp_elevation < 0.57){
-			// 	tilemap.ocean.tiles.push( {height: tmp_elevation, x: local_x, y: local_y} );
-			// } else if(tmp_elevation > 0.57 && tmp_elevation < 0.6 ){
-			// 	tilemap.coastline.tiles.push( {height: tmp_elevation, x: local_x, y: local_y} );
-			// } else if(tmp_elevation > 0.6 && tmp_elevation < 0.7 ){
-			// 	tilemap.inland.tiles.push( {height: tmp_elevation, x: local_x, y: local_y} );
-			// } else if(tmp_elevation > 0.7 && tmp_elevation < 0.8 ){
-			// 	tilemap.highland.tiles.push( {height: tmp_elevation, x: local_x, y: local_y} );
-			// } else if(tmp_elevation > 0.8 && tmp_elevation < 1 ){
-			// 	tilemap.mountain.tiles.push( {height: tmp_elevation, x: local_x, y: local_y} );
-			// }
+			if(elevation > 0 && elevation < 0.57){
+				tile_data.type = 'ocean';
+			} else if(elevation > 0.57 && elevation < 0.6 ){
+				tile_data.type = 'beach';
+			} else if(elevation > 0.6 && elevation < 0.7 ){
+				tile_data.type = 'beach_dirt';
+			} else if(elevation > 0.7 && elevation < 0.8 ){
+				tile_data.type = 'inland';
+			} else if(elevation > 0.8 && elevation < 1 ){
+				tile_data.type = 'highland';
+			}
+
+			tilemap.push( tile_data );
 
 			local_x++;
 		}

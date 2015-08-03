@@ -9,6 +9,7 @@ var auto_pan = location.search.split('auto_pan=')[1];
 // var cube_size = 20;
 var cube_size = 36;
 var map_size = 2500000;
+
 var start_origin = [552648, 429251];
 var origin = [552648, 429251];
 
@@ -100,24 +101,18 @@ function init(){
 	rstats.domElement.style.bottom = '0px';
 	$('body').append( rstats.domElement );
 
-	// camera = new THREE.OrthographicCamera( window.innerWidth / - 2, window.innerWidth / 2, window.innerHeight / 2, window.innerHeight / - 2, -2000, 2000 );
-	// camera.position.x = 200;
-	// camera.position.z = 200;
-	// camera.position.y = 100;
-
 	scene = new THREE.Scene();
 
+	// Camera
 	var aspect = window.innerWidth / window.innerHeight;
 	var d = 800;
 	camera = new THREE.OrthographicCamera( - d * aspect, d * aspect, d, - d, -2000, 2000 );
 	camera_rotation_x = Math.cos( Math.PI ) * 5;
 	camera_rotation_z = Math.cos( Math.PI / 2 ) * 5;
-	// camera.position.set(10, 8, 10);
 	camera.position.set(5, 5, 5);
 	camera.lookAt( scene.position );
 
 	// Lights
-
 	var ambient_light = new THREE.AmbientLight( 0x404040 );
 	scene.add( ambient_light );
 
@@ -187,7 +182,6 @@ function Network(){
 	ws.onopen = function(){
 		init_socket_connect = true;
 		self.get_map_data( origin_point, 1 );
-		// self.get_map_data( origin_point, 4 );
 	};
 
 	this.get_map_data = function(origin_point, distance){
@@ -247,7 +241,6 @@ function Network(){
 }
 
 function Terrain(){
-
 	this.tilemaps = Object();
 	this.tile_width = 100;
 	var self = this;
@@ -258,35 +251,41 @@ function Terrain(){
 		self.brown = 0x77543c;
 		self.green = 0x326800;
 		self.blue = 0x254e78;
-		self.grass = THREE.ImageUtils.loadTexture('assets/img/grass.png');
-		self.grass.wrapS = self.grass.wrapT = THREE.RepeatWrapping;
-		self.grass.repeat.set( cube_size, cube_size );
+		self.textures = {};
+		var texture_files = [
+			'grass.png',
+			'stone.png',
+			'sand.jpg',
+			'dirt.jpg',
+			'water.jpg'
+		];
 
-		self.stone = THREE.ImageUtils.loadTexture('assets/img/stone.png');
-		self.stone.wrapS = self.stone.wrapT = THREE.RepeatWrapping;
-		self.stone.repeat.set( cube_size, cube_size );
-
-		self.water = THREE.ImageUtils.loadTexture('assets/img/water.jpg');
-		self.water.wrapS = self.water.wrapT = THREE.RepeatWrapping;
-		self.water.repeat.set( cube_size, cube_size );
-
-		// material_array.push( new THREE.MeshLambertMaterial( { map: THREE.ImageUtils.loadTexture('assets/img/grass.jpg') } ) );
+		for(var i in texture_files){
+			var basename = texture_files[i].split('.');
+			self.textures[basename[0]] = THREE.ImageUtils.loadTexture('assets/img/' + texture_files[i] );
+			self.textures[basename[0]].wrapS = self.textures[basename[0]].wrapT = THREE.RepeatWrapping;
+			self.textures[basename[0]].repeat.set( cube_size, cube_size );
+		}
 
 		var material_array = [];
-		material_array.push( new THREE.MeshBasicMaterial({ color: self.blue }) );
-		material_array.push( new THREE.MeshBasicMaterial( { map: self.grass } ) );
-		material_array.push( new THREE.MeshLambertMaterial({ color: self.brown }) );
+		material_array.push( new THREE.MeshBasicMaterial({ map: self.textures.water }) );
+		material_array.push( new THREE.MeshLambertMaterial({ map: self.textures.sand }) );
+		material_array.push( new THREE.MeshLambertMaterial({ map: self.textures.dirt }) );
+		material_array.push( new THREE.MeshBasicMaterial( { map: self.textures.grass } ) );
 
 		self.tile_textures = new THREE.MeshFaceMaterial(material_array);
 
-
-		// self.tile_geometry = new THREE.PlaneGeometry( self.tile_width * cube_size, self.tile_width * cube_size, cube_size, cube_size );
+		self.material_map = {
+			water: 0,
+			sand: 1,
+			beach_dirt: 2,
+			grass: 3,
+		};
 	})();
 
 	this.update_tilemaps = function(tilemaps){
 
 		for(var i in tilemaps){
-			// console.log(i);
 			this.tilemaps[i] = Array();
 			this.render_tiles(tilemaps[i], i);
 		}
@@ -306,10 +305,13 @@ function Terrain(){
 			var material_index = 0;
 
 			if(tilemap[i].height > 0 && tilemap[i].height < 0.57){
-				material_index = 0;
-			} else if(tilemap[i].height > 0.57 && tilemap[i].height < 0.6 ){
-				material_index = 1;
-				// tmp_height = (tilemap[i].height - 0.57) * 10000000;
+				material_index = self.material_map.water;
+			} else if(tilemap[i].height > 0.57 && tilemap[i].height < 0.57002 ){
+				material_index = self.material_map.sand;
+			} else if(tilemap[i].height > 0.57002 && tilemap[i].height < 0.57003 ){
+				material_index = self.material_map.beach_dirt;
+			} else if(tilemap[i].height > 0.57003 && tilemap[i].height < 0.6 ){
+				material_index = self.material_map.grass;
 			}
 
 			// } else if(tilemap[i].height > 0.6 && tilemap[i].height < 0.7 ){
@@ -457,7 +459,7 @@ function UI(){
 
 			var intersect_point = self.raycast(event);
 			if( typeof(intersect_point) != 'undefined' ){
-				console.log( intersect_point[1] );
+				console.log( intersect_point[1] ); // True World coord
 			}
 
 		});
@@ -639,12 +641,13 @@ function UI(){
 
 function Models(){
 	this.loader = new THREE.JSONLoader();
+
 	this.models = {};
 	var self = this;
 
 	this.load_model = function(load_path, model_name){
 		this.loader.load(load_path, function(geometry, material){
-			console.log(geometry, material);
+			// console.log(geometry, material);
 			material = new THREE.MeshLambertMaterial({color: 0x555555});
 			var tmp_mesh = new THREE.Mesh(geometry, material);
 			self.models[model_name] = tmp_mesh;
