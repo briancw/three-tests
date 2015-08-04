@@ -28,6 +28,11 @@ forrest_simplex.octaves = 12;
 forrest_simplex.frequency = 0.05;
 // forrest_simplex.persistence = 1;
 
+var temperature_simplex = new FastSimplexNoise({random: random});
+temperature_simplex.octaves = 10;
+temperature_simplex.frequency = 1.1;
+temperature_simplex.persistence = 0.5;
+
 var map_size = 2500000;
 
 // var authenticated_users = Object();
@@ -134,23 +139,26 @@ function generate_tilemap(map_params, origin_point){
 			nw = Math.sin( ((y/cube_size) * scale) * 2 * Math.PI );
 
 			var elevation = fast_simplex.get4DNoise(nx,ny,nz,nw) + 0.55;
+			var tile_data = {height: elevation, x: local_x, z: local_y};
+
+			var temperature = calculate_temperature(elevation, y, start_y, cube_size);
+			tile_data.temperature = temperature;
+
 			var forrest_density = 0;
 			if(elevation > 0.57){
 				forrest_density = forrest_simplex.get2DNoise(local_x, local_y);
 			}
-
-			var tile_data = {height: elevation, x: local_x, z: local_y};
 			tile_data.forrest_density = forrest_density;
 
 			if(elevation > 0 && elevation < 0.57){
 				tile_data.type = 'ocean';
-			} else if(elevation > 0.57 && elevation < 0.6 ){
+			} else if(elevation > 0.57 && elevation < 0.57002){
 				tile_data.type = 'beach';
-			} else if(elevation > 0.6 && elevation < 0.7 ){
+			} else if(elevation > 0.57002 && elevation < 0.57003){
 				tile_data.type = 'beach_dirt';
-			} else if(elevation > 0.7 && elevation < 0.8 ){
+			} else if(elevation > 0.57003 && elevation < 0.6){
 				tile_data.type = 'inland';
-			} else if(elevation > 0.8 && elevation < 1 ){
+			} else if(elevation > 0.6 && elevation < 1.5 ){
 				tile_data.type = 'highland';
 			}
 
@@ -165,4 +173,25 @@ function generate_tilemap(map_params, origin_point){
 	return tilemap;
 }
 
+function calculate_temperature(elevation, y, start_y, cube_size){
+	var temperature = 60; // In Farenheight
+	if(elevation <= 0.57){
+		temperature -= 20; // Drop 20* over the ocean
+	} else {
+		// temp drops 3f per 1k ft, based on max elevation of 20k feet
+		// Max altitude in the US is 20,000ft
+		// The top of the tallest mountain (alt:1 or 0.43 above sea level, gets a full 60f reduction in temp)
+		// temperature -= ((elevation - .57) * 140); // This gets lowest temp at top of mountains 0F
+		temperature -= ((elevation - .57) * 210); // This should return a coldest of about -30 (less if very tall mt's)
+	}
+	// Average temp on the equator is about 90f
+	var equator_distance = Math.abs( Math.abs( 1 - ((y-start_y)/cube_size*2) ) - 1 );
+	// temperature += (equator_distance * 30); // This will get a max temp of about 90f
+	temperature += (equator_distance * 40);
+	var temp_variance = (temperature_simplex.get4DNoise(nx,ny,nz,nw) * 30); // +- at most 15f
+	// if( Math.round(Math.random()*1000) == 50 ){ console.log( temp_variance )}
+	temperature += temp_variance;
+
+	return temperature;
+}
 
