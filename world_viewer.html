@@ -48,10 +48,16 @@
 			$('.canvases').append(this.terrain_canvas);
 
 			this.temp_canvas = $('<canvas>', {
-				id: 'world',
+				id: 'temperature',
 				class: 'canvas',
 			});
 			$('.canvases').append(this.temp_canvas);
+
+			this.foliage_density = $('<canvas>', {
+				id: 'foliage',
+				class: 'canvas',
+			});
+			$('.canvases').append(this.foliage_density);
 
 			if(doc_width > doc_height){
 				this.smaller_side = doc_height;
@@ -68,6 +74,7 @@
 
 			this.world_ctx = this.terrain_canvas[0].getContext('2d');
 			this.temp_ctx = this.temp_canvas[0].getContext('2d');
+			this.foliage_ctx = this.temp_canvas[0].getContext('2d');
 
 			this.tile_width = 4;
 			this.zoom_level = 1;
@@ -94,8 +101,9 @@
 
 				this.clear(this.world_ctx);
 				this.clear(this.temp_ctx);
-				var coldest = 100;
-				var hottest = -10;
+				this.clear(this.foliage_ctx);
+				// var coldest = 100;
+				// var hottest = -10;
 
 				for(var i in world_tilemap){
 
@@ -111,39 +119,39 @@
 						this.update_fill( '#304A0C', this.world_ctx );
 					}
 
-					if(world_tilemap[i].temperature < coldest){ coldest = world_tilemap[i].temperature; }
-					if(world_tilemap[i].temperature > hottest){ hottest = world_tilemap[i].temperature; }
+					var tmp_foliage_density = world_tilemap[i].foliage_density;
+					this.update_fill( 'rgba(100,0,0,'+tmp_foliage_density+')', this.foliage_ctx );
+
+					// if(world_tilemap[i].temperature < coldest){ coldest = world_tilemap[i].temperature; }
+					// if(world_tilemap[i].temperature > hottest){ hottest = world_tilemap[i].temperature; }
 
 					// var temperature = world_tilemap[i].temperature / 100;
 					// var tmp_fill_style = 'rgba(100,0,0,'+temperature+')';
 					// this.update_fill( tmp_fill_style, this.temp_ctx );
 
-					var temperature = world_tilemap[i].temperature;
-					if( Math.round(world_tilemap[i].temperature) > 80){
-						this.update_fill( 'rgba(100,0,0,0.5)', this.temp_ctx );
-					} else if( Math.round(world_tilemap[i].temperature) < 40){
-						this.update_fill( 'rgba(0,0,100,0.5)', this.temp_ctx );
-					} else {
-						this.update_fill( 'rgba(0,0,0,0)', this.temp_ctx );
-					}
+					// var temperature = world_tilemap[i].temperature;
+					// if( Math.round(world_tilemap[i].temperature) > 80){
+					// 	this.update_fill( 'rgba(100,0,0,0.5)', this.temp_ctx );
+					// } else if( Math.round(world_tilemap[i].temperature) < 40){
+					// 	this.update_fill( 'rgba(0,0,100,0.5)', this.temp_ctx );
+					// } else {
+					// 	this.update_fill( 'rgba(0,0,0,0)', this.temp_ctx );
+					// }
 					// if( Math.round(Math.random()*1000) == 500 ){
 					// 	console.log( world_tilemap[i].temperature );
 					// }
 
-					this.path(this.world_ctx);
-					this.path(this.temp_ctx);
-
 					this.draw_tile( world_tilemap[i].x, world_tilemap[i].z, this.world_ctx );
-					this.draw_tile( world_tilemap[i].x, world_tilemap[i].z, this.temp_ctx );
+					this.draw_tile( world_tilemap[i].x, world_tilemap[i].z, this.foliage_ctx );
+					// this.draw_tile( world_tilemap[i].x, world_tilemap[i].z, this.temp_ctx );
 
-					this.fill(this.world_ctx);
-					this.fill(this.temp_ctx);
+					// this.fill(this.temp_ctx);
+					// this.fill(this.world_ctx);
+					this.fill(this.foliage_ctx);
 				}
 
-				console.log( 'coldest: ' + coldest );
-				console.log( 'hottest: ' + hottest );
-
-				// this.world_ctx.fillRect(this.smaller_side/2, this.smaller_side/2, 2, 2);
+				// console.log( 'coldest: ' + coldest );
+				// console.log( 'hottest: ' + hottest );
 			}
 
 			this.fill = function(ctx){
@@ -161,6 +169,7 @@
 			this.update_fill = function(new_fill_style, ctx){
 				if(ctx.fillStyle != new_fill_style){
 					ctx.fillStyle = new_fill_style;
+					ctx.beginPath();
 				}
 			}
 

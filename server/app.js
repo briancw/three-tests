@@ -23,10 +23,10 @@ fast_simplex.octaves = 12;
 fast_simplex.frequency = 0.315;
 fast_simplex.persistence = 0.5;
 
-var forrest_simplex = new FastSimplexNoise({random: random});
-forrest_simplex.octaves = 12;
-forrest_simplex.frequency = 0.05;
-// forrest_simplex.persistence = 1;
+var foliage_simplex = new FastSimplexNoise({random: random});
+foliage_simplex.octaves = 12;
+foliage_simplex.frequency = 0.05;
+// foliage_simplex.persistence = 1;
 
 var temperature_simplex = new FastSimplexNoise({random: random});
 temperature_simplex.octaves = 10;
@@ -144,11 +144,11 @@ function generate_tilemap(map_params, origin_point){
 			var temperature = calculate_temperature(elevation, y, start_y, cube_size);
 			tile_data.temperature = temperature;
 
-			var forrest_density = 0;
+			var foliage_density = 0;
 			if(elevation > 0.57){
-				forrest_density = forrest_simplex.get2DNoise(local_x, local_y);
+				foliage_density = foliage_simplex.get2DNoise(local_x, local_y);
 			}
-			tile_data.forrest_density = forrest_density;
+			tile_data.foliage_density = foliage_density;
 
 			if(elevation > 0 && elevation < 0.57){
 				tile_data.type = 'ocean';
@@ -189,7 +189,7 @@ function calculate_temperature(elevation, y, start_y, cube_size){
 	// temperature += (equator_distance * 30); // This will get a max temp of about 90f
 	temperature += (equator_distance * 40);
 	var temp_variance = (temperature_simplex.get4DNoise(nx,ny,nz,nw) * 30); // +- at most 15f
-	// if( Math.round(Math.random()*1000) == 50 ){ console.log( temp_variance )}
+	// if( Math.round(Math.random()*1000) == 50 ){ console.log( equator_distance )}
 	temperature += temp_variance;
 
 	return temperature;
