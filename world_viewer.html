@@ -53,11 +53,11 @@
 			});
 			$('.canvases').append(this.temp_canvas);
 
-			this.foliage_density = $('<canvas>', {
-				id: 'foliage',
+			this.overlay_canvas = $('<canvas>', {
+				id: 'overlay',
 				class: 'canvas',
 			});
-			$('.canvases').append(this.foliage_density);
+			$('.canvases').append(this.overlay_canvas);
 
 			if(doc_width > doc_height){
 				this.smaller_side = doc_height;
@@ -74,7 +74,7 @@
 
 			this.world_ctx = this.terrain_canvas[0].getContext('2d');
 			this.temp_ctx = this.temp_canvas[0].getContext('2d');
-			this.foliage_ctx = this.temp_canvas[0].getContext('2d');
+			this.overlay_ctx = this.overlay_canvas[0].getContext('2d');
 
 			this.tile_width = 4;
 			this.zoom_level = 1;
@@ -100,8 +100,8 @@
 			this.update_worldmap = function(world_tilemap){
 
 				this.clear(this.world_ctx);
-				this.clear(this.temp_ctx);
-				this.clear(this.foliage_ctx);
+				// this.clear(this.temp_ctx);
+				this.clear(this.overlay_ctx);
 				// var coldest = 100;
 				// var hottest = -10;
 
@@ -109,18 +109,37 @@
 
 					if( world_tilemap[i].type == 'ocean' ){
 						this.update_fill( '#4F8096', this.world_ctx );
+					} else if( world_tilemap[i].type == 'lake' ){
+						this.update_fill( '#4862A3', this.world_ctx );
 					} else if( world_tilemap[i].type == 'beach' ){
 						this.update_fill( '#FFEBC1', this.world_ctx );
 					} else if( world_tilemap[i].type == 'beach_dirt' ){
 						this.update_fill( '#987C5D', this.world_ctx );
-					} else if( world_tilemap[i].type == 'inland' ){
+					} else if( world_tilemap[i].type == 'inland_costal' ){
 						this.update_fill( '#4C651A', this.world_ctx );
-					} else if( world_tilemap[i].type == 'highland' ){
+					} else if( world_tilemap[i].type == 'inland' ){
 						this.update_fill( '#304A0C', this.world_ctx );
+					} else if( world_tilemap[i].type == 'jungle' ){
+						this.update_fill( '#50B948', this.world_ctx );
+					} else if( world_tilemap[i].type == 'inland_desert' ){
+						this.update_fill( '#FFEBC1', this.world_ctx );
+					} else if( world_tilemap[i].type == 'oasis' ){
+						this.update_fill( '#4C651A', this.world_ctx );
+					} else if( world_tilemap[i].type == 'lower_mountain' ){
+						this.update_fill( '#3A3526', this.world_ctx );
+					} else if( world_tilemap[i].type == 'upper_mountain' ){
+						this.update_fill( 'grey', this.world_ctx );
+					} else if( world_tilemap[i].type == 'glacier' ){
+						this.update_fill( '#0C1138', this.world_ctx );
+					} else if( world_tilemap[i].type == 'mountain_peak' ){
+						this.update_fill( '#ddd', this.world_ctx );
 					}
 
-					var tmp_foliage_density = world_tilemap[i].foliage_density;
-					this.update_fill( 'rgba(100,0,0,'+tmp_foliage_density+')', this.foliage_ctx );
+					// var lake_density = world_tilemap[i].lake_density;
+					// this.update_fill('rgba(0,0,100,'+lake_density+')', this.overlay_ctx);
+
+					// var tmp_foliage_density = world_tilemap[i].foliage_density;
+					// this.update_fill( 'rgba(100,100,100,'+tmp_foliage_density+')', this.foliage_ctx );
 
 					// if(world_tilemap[i].temperature < coldest){ coldest = world_tilemap[i].temperature; }
 					// if(world_tilemap[i].temperature > hottest){ hottest = world_tilemap[i].temperature; }
@@ -142,12 +161,12 @@
 					// }
 
 					this.draw_tile( world_tilemap[i].x, world_tilemap[i].z, this.world_ctx );
-					this.draw_tile( world_tilemap[i].x, world_tilemap[i].z, this.foliage_ctx );
+					// this.draw_tile( world_tilemap[i].x, world_tilemap[i].z, this.overlay_ctx );
 					// this.draw_tile( world_tilemap[i].x, world_tilemap[i].z, this.temp_ctx );
 
 					// this.fill(this.temp_ctx);
-					// this.fill(this.world_ctx);
-					this.fill(this.foliage_ctx);
+					this.fill(this.world_ctx);
+					this.fill(this.overlay_ctx);
 				}
 
 				// console.log( 'coldest: ' + coldest );

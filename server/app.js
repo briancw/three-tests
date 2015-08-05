@@ -24,9 +24,14 @@ fast_simplex.frequency = 0.315;
 fast_simplex.persistence = 0.5;
 
 var foliage_simplex = new FastSimplexNoise({random: random});
-foliage_simplex.octaves = 12;
-foliage_simplex.frequency = 0.05;
-// foliage_simplex.persistence = 1;
+foliage_simplex.octaves = 10;
+foliage_simplex.frequency = 3;
+foliage_simplex.persistence = 0.4;
+
+var lake_simplex = new FastSimplexNoise({random: random});
+lake_simplex.octaves = 10;
+lake_simplex.frequency = 8;
+lake_simplex.persistence = 0.4;
 
 var temperature_simplex = new FastSimplexNoise({random: random});
 temperature_simplex.octaves = 10;
@@ -144,22 +149,50 @@ function generate_tilemap(map_params, origin_point){
 			var temperature = calculate_temperature(elevation, y, start_y, cube_size);
 			tile_data.temperature = temperature;
 
+
 			var foliage_density = 0;
+			var lake_density = 0;
 			if(elevation > 0.57){
-				foliage_density = foliage_simplex.get2DNoise(local_x, local_y);
+				lake_density = lake_simplex.get4DNoise(nx,ny,nz,nw) + 0.5;
+				foliage_density = foliage_simplex.get4DNoise(nx,ny,nz,nw);
 			}
 			tile_data.foliage_density = foliage_density;
+			tile_data.lake_density = lake_density;
 
 			if(elevation > 0 && elevation < 0.57){
 				tile_data.type = 'ocean';
-			} else if(elevation > 0.57 && elevation < 0.57002){
-				tile_data.type = 'beach';
-			} else if(elevation > 0.57002 && elevation < 0.57003){
-				tile_data.type = 'beach_dirt';
-			} else if(elevation > 0.57003 && elevation < 0.6){
-				tile_data.type = 'inland';
-			} else if(elevation > 0.6 && elevation < 1.5 ){
-				tile_data.type = 'highland';
+			} else {
+				if(lake_density > 0.8){
+					if(elevation > 0.6 && elevation < 0.75 && foliage_density < -0.25 ){
+						tile_data.type = 'oasis';
+					} else if(elevation > 0.82 && elevation < 0.92){
+						tile_data.type = 'glacier';
+					} else {
+						tile_data.type = 'lake';
+					}
+				} else {
+					if(elevation > 0.57 && elevation < 0.57002){
+						tile_data.type = 'beach';
+					} else if(elevation > 0.57002 && elevation < 0.57003){
+						tile_data.type = 'beach_dirt';
+					} else if(elevation > 0.57003 && elevation < 0.6){
+						tile_data.type = 'inland_costal';
+					} else if(elevation > 0.6 && elevation < 0.75 ){
+						if(foliage_density > 0.3){
+							tile_data.type = 'jungle';
+						} else if(foliage_density < -0.25){
+							tile_data.type = 'inland_desert';
+						} else {
+							tile_data.type = 'inland';
+						}
+					} else if(elevation > 0.75 && elevation < 0.82){
+						tile_data.type = 'lower_mountain';
+					} else if(elevation > 0.82 && elevation < 0.92){
+						tile_data.type = 'upper_mountain';
+					} else if(elevation > 0.92 && elevation < 2){
+						tile_data.type = 'mountain_peak';
+					}
+				}
 			}
 
 			tilemap.push( tile_data );
