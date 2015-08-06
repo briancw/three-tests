@@ -309,8 +309,11 @@ function Terrain(){
 			mountain_peak: 13
 		};
 
+		var grass_t = new THREE.ImageUtils.loadTexture('assets/img/grass.png');
+
 		var materials = [
-			new THREE.MeshBasicMaterial( { color: self.green } ),
+			// new THREE.MeshBasicMaterial( { color: self.green } ),
+			new THREE.MeshBasicMaterial( { map: grass_t, color: self.green } ),
 			new THREE.MeshBasicMaterial( { color: self.brown } ),
 			new THREE.MeshBasicMaterial( { color: self.blue } )
 		];
@@ -365,7 +368,18 @@ function Terrain(){
 			chunk_geo.faces.push( new THREE.Face3( (i*4), (i*4)+2, (i*4)+1 ) );
 			chunk_geo.faces.push( new THREE.Face3( (i*4), (i*4)+1, (i*4)+3 ) );
 
+			chunk_geo.faceVertexUvs[0].push([
+				new THREE.Vector2( 0,0 ),
+				new THREE.Vector2( 0,1 ),
+				new THREE.Vector2( 1,0 )
+			]);
 			chunk_geo.faces[i*2].materialIndex = 0;
+
+			chunk_geo.faceVertexUvs[0].push([
+				new THREE.Vector2( 0,1 ),
+				new THREE.Vector2( 1,1 ),
+				new THREE.Vector2( 1,0 )
+			]);
 			chunk_geo.faces[(i*2)+1].materialIndex = 0;
 
 			// if(height != next_height){
