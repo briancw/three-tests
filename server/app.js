@@ -18,25 +18,30 @@ function random(){
 	return 0.4710536374424983;
 }
 
-var fast_simplex = new FastSimplexNoise({random: random});
+var fast_simplex = new FastSimplexNoise({random: random}); // The old 4d one
 fast_simplex.octaves = 12;
 fast_simplex.frequency = 0.315;
 fast_simplex.persistence = 0.5;
 
-var foliage_simplex = new FastSimplexNoise({random: random});
-foliage_simplex.octaves = 10;
-foliage_simplex.frequency = 3;
-foliage_simplex.persistence = 0.4;
+var terrain_simplex = new FastSimplexNoise({random: random});
+terrain_simplex.octaves = 12;
+terrain_simplex.frequency = 0.315;
+terrain_simplex.persistence = 0.5;
 
-var lake_simplex = new FastSimplexNoise({random: random});
-lake_simplex.octaves = 10;
-lake_simplex.frequency = 8;
-lake_simplex.persistence = 0.4;
+// var foliage_simplex = new FastSimplexNoise({random: random});
+// foliage_simplex.octaves = 10;
+// foliage_simplex.frequency = 3;
+// foliage_simplex.persistence = 0.4;
 
-var temperature_simplex = new FastSimplexNoise({random: random});
-temperature_simplex.octaves = 10;
-temperature_simplex.frequency = 1.1;
-temperature_simplex.persistence = 0.5;
+// var lake_simplex = new FastSimplexNoise({random: random});
+// lake_simplex.octaves = 10;
+// lake_simplex.frequency = 8;
+// lake_simplex.persistence = 0.4;
+
+// var temperature_simplex = new FastSimplexNoise({random: random});
+// temperature_simplex.octaves = 10;
+// temperature_simplex.frequency = 1.1;
+// temperature_simplex.persistence = 0.5;
 
 var map_size = 2500000;
 
@@ -132,20 +137,29 @@ function generate_tilemap(map_params, origin_point){
 	var scale = cube_size / map_size;
 	var local_y = 0;
 
+terrain_simplex.amplitude = 1;
+terrain_simplex.octaves = 12;
+terrain_simplex.frequency = 0.01;
+terrain_simplex.persistence = 0.6;
+
 	for(y = start_y; y < cube_size + start_y; y++){
 
 		var local_x = 0;
 
 		for(x = start_x; x < cube_size + start_x; x++){
 
-			nx = Math.cos( ((x/cube_size) * scale) * 2 * Math.PI );
-			ny = Math.cos( ((y/cube_size) * scale) * 2 * Math.PI );
-			nz = Math.sin( ((x/cube_size) * scale) * 2 * Math.PI );
-			nw = Math.sin( ((y/cube_size) * scale) * 2 * Math.PI );
+			// nx = Math.cos( ((x/cube_size) * scale) * 2 * Math.PI );
+			// ny = Math.cos( ((y/cube_size) * scale) * 2 * Math.PI );
+			// nz = Math.sin( ((x/cube_size) * scale) * 2 * Math.PI );
+			// nw = Math.sin( ((y/cube_size) * scale) * 2 * Math.PI );
+			// var elevation = fast_simplex.get4DNoise(nx,ny,nz,nw) + 0.55;
 
-			var elevation = fast_simplex.get4DNoise(nx,ny,nz,nw) + 0.55;
+			var elevation = (terrain_simplex.get2DNoise(x, y) + 1) / 2;
 			var tile_data = {height: elevation, x: local_x, z: local_y};
 
+			// if(Math.round(Math.random()*500) == 10){ console.log(elevation) }
+
+/*
 			var temperature = calculate_temperature(elevation, y, start_y, cube_size);
 			tile_data.temperature = temperature;
 
@@ -194,7 +208,7 @@ function generate_tilemap(map_params, origin_point){
 					}
 				}
 			}
-
+*/
 			tilemap.push( tile_data );
 
 			local_x++;
