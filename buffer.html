@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title></title>
+	<link rel="stylesheet" type="text/css" href="assets/dist/all.min.css">
+</head>
+<body>
+
+<!--
+	<div class="canvases">
+		<canvas id="main" class="canvas"></canvas>
+	</div>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+-->
+	<script src="assets/js_libs/jquery.js"></script>
+	<script src="assets/js_libs/three.min.js"></script>
+	<script src="assets/js_libs/stats.js"></script>
+
+	<script>
+
+		var camera, scene, renderer, fancy;
+
+		init();
+		animate();
+
+		function init() {
+
+			stats = new Stats();
+			stats.domElement.style.position = 'absolute';
+			stats.domElement.style.top = '0px';
+			$('body').append(stats.domElement);
+
+			camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, 1000 );
+			camera.position.set( 0, 75, 100 );
+
+			scene = new THREE.Scene();
+
+			var tw = 1;
+
+			var geometry = new THREE.PlaneBufferGeometry( tw, tw );
+
+			var mats = [];
+			mats.push( new THREE.MeshBasicMaterial({color: 0xCE2730}) );
+			mats.push( new THREE.MeshBasicMaterial({color: 0x50B948}) );
+			mats.push( new THREE.MeshBasicMaterial({color: 0x0C1138}) );
+			mats.push( new THREE.MeshBasicMaterial({color: 0xCE2730}) );
+			mats.push( new THREE.MeshBasicMaterial({color: 0xCE2730}) );
+
+			// var group = new THREE.Object3D();
+
+			// for(var i = 0; i < 100; i++){
+			// 	for(var i2 = 0; i2 < 100; i2++){
+			// 		var tmp_mesh = new THREE.Mesh(geometry, mats[Math.round(Math.random()*5)]);
+			// 		tmp_mesh.position.x = i * tw;
+			// 		tmp_mesh.position.z = i2 * tw;
+			// 		tmp_mesh.rotation.x = (Math.PI / 180) * -90;
+			// 		// scene.add(tmp_mesh)
+			// 	}
+			// }
+
+			var smooth = new THREE.PlaneGeometry(100, 100, 100, 100);
+			var msmooth = new THREE.Mesh( smooth, new THREE.MeshFaceMaterial(mats) );
+			msmooth.rotation.x = (Math.PI / 180) * -90;
+
+			for(var i in smooth.faces){
+				smooth.faces[i].materialIndex = Math.round(Math.random()*4);
+			}
+
+			scene.add(msmooth);
+			// var multi = new THREE.MeshFaceMaterial(mats);
+
+			// fancy = new THREE.Mesh( geometry, multi);
+
+			// console.log( fancy)
+
+			// fancy.rotation.x = (Math.PI / 180) * -90;
+
+			// scene.add(fancy)
+
+			// var texture = new THREE.Texture( generateTexture() );
+			// texture.needsUpdate = true;
+
+			// for ( var i = 0; i < 15; i ++ ) {
+			// 	var material = new THREE.MeshBasicMaterial( {
+			// 		color: new THREE.Color().setHSL( 0.3, 0.75, ( i / 15 ) * 0.4 + 0.1 ),
+			// 		map: texture,
+			// 		depthTest: false,
+			// 		depthWrite: false,
+			// 		transparent: true
+			// 	} );
+
+			// 	var mesh = new THREE.Mesh( geometry, material );
+
+			// 	mesh.position.y = i * 0.25;
+			// 	mesh.rotation.x = - Math.PI / 2;
+
+			// 	scene.add( mesh );
+
+			// }
+
+			// scene.children.reverse();
+
+			renderer = new THREE.WebGLRenderer();
+			renderer.setClearColor( 0xffffff );
+			renderer.setPixelRatio( window.devicePixelRatio );
+			renderer.setSize( window.innerWidth, window.innerHeight );
+			document.body.appendChild( renderer.domElement );
+
+		}
+
+		// function generateTexture() {
+
+		// 	var canvas = document.createElement( 'canvas' );
+		// 	canvas.width = 512;
+		// 	canvas.height = 512;
+
+		// 	var context = canvas.getContext( '2d' );
+
+		// 	// for ( var i = 0; i < 20000; i ++ ) {
+		// 	for ( var i = 0; i < 200; i ++ ) {
+
+		// 		context.fillStyle = 'hsl(0,0%,' + ( Math.random() * 50 + 50 ) + '%)';
+		// 		context.beginPath();
+		// 		context.arc( Math.random() * canvas.width, Math.random() * canvas.height, Math.random() + 0.15, 0, Math.PI * 2, true );
+		// 		context.fill();
+
+		// 	}
+
+		// 	context.globalAlpha = 0.075;
+		// 	context.globalCompositeOperation = 'lighter';
+
+		// 	return canvas;
+
+		// }
+
+
+		function animate() {
+			requestAnimationFrame( animate );
+
+			stats.update();
+			render();
+		}
+
+		function render() {
+
+			var time = Date.now() / 6000;
+
+			camera.position.x = 80 * Math.cos( time );
+			camera.position.z = 80 * Math.sin( time );
+
+			camera.lookAt( scene.position );
+
+			// for ( var i = 0, l = scene.children.length; i < l; i ++ ) {
+				// var mesh = scene.children[ i ];
+				// mesh.position.x = Math.sin( time * 4 ) * i * i * 0.005;
+				// mesh.position.z = Math.cos( time * 6 ) * i * i * 0.005;
+			// }
+
+			renderer.render( scene, camera );
+
+		}
+
+
+
+	</script>
+
+	<div class="error_message_box">
+		<div class="error_message"></div>
+	</div>
+</body>
+</html>
