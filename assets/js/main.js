@@ -117,12 +117,12 @@ function init(){
 	camera.lookAt( scene.position );
 
 	// Lights
-	var ambient_light = new THREE.AmbientLight( 0x404040 );
+	var ambient_light = new THREE.AmbientLight( 0xcccccc );
 	scene.add( ambient_light );
 
 	terrain.sun_light = new THREE.DirectionalLight( 0xffffff, 2 );
-	// terrain.sun_light.position.set( 1, 1, 0.5 ).normalize();
-	terrain.sun_light.position.set( 100, 100, 50 ).normalize();
+	terrain.sun_light.position.set( 1, 1, 0.5 ).normalize();
+	// terrain.sun_light.position.set( 100, 100, 50 ).normalize();
 
 	// terrain.sun_light.position.x = 100;
 	// terrain.sun_light.position.z = 100;
@@ -158,7 +158,7 @@ function init(){
 
 	var foo = new THREE.Mesh( foo_geo, foo_mat );
 	foo.position.set(0, 500, 0);
-	scene.add(foo);
+	// scene.add(foo);
 
 	setInterval(function(){
 		foo.rotation.y += 0.01;
@@ -350,11 +350,11 @@ function Terrain(){
 		// grass_t.minFilter = THREE.LinearMipMapLinearFilter;
 
 		var materials = [
-			// new THREE.MeshBasicMaterial( { color: self.green } ),
-			new THREE.MeshBasicMaterial( { color: self.green, map: grass_t, vertexColors: THREE.VertexColors } ),
-			// new THREE.MeshBasicMaterial( { color: self.brown } ),
-			new THREE.MeshBasicMaterial( { map: grass_side, vertexColors: THREE.VertexColors } ),
-			new THREE.MeshBasicMaterial( { color: self.blue } )
+			new THREE.MeshLambertMaterial( { color: self.green } ),
+			// new THREE.MeshLambertMaterial( { color: self.green, map: grass_t, vertexColors: THREE.VertexColors } ),
+			// new THREE.MeshLambertMaterial( { color: self.brown, vertexColors: THREE.VertexColors } ),
+			new THREE.MeshLambertMaterial( { map: grass_side, vertexColors: THREE.VertexColors } ),
+			new THREE.MeshLambertMaterial( { color: self.blue } )
 		];
 		self.terrain_texture = new THREE.MeshFaceMaterial(materials);
 
@@ -376,7 +376,7 @@ function Terrain(){
 		var chunk_geo = new THREE.Geometry();
 		var chunk_geo_sides = new THREE.Geometry();
 		var height = 0;
-
+// console.log( tilemap );
 		for(var i in tilemap){
 			var x = tilemap[i].x;
 			var z = tilemap[i].z;
@@ -388,13 +388,16 @@ function Terrain(){
 			var max_z = relative_z + this.tile_width;
 			var min_height = height - this.tile_width;
 
-			// if( typeof(tilemap[i+1]) != 'undefined' ){
-			// 	var next_height = (Math.round(tilemap[i+1].height * 10) * 50) - 150;
-			// } else {
-			// 	next_height = height;
-			// }
+			if( ((i*1)+1) % cube_size === 0 ){
+				// var next_height = (height - terrain.tile_width);
+				var next_height = (9000);
+			} else {
+				var next_height = (Math.round(tilemap[parseInt(i,10)+1].height * 10) * self.tile_width) - 300;
+				// var next_height = height;
+			}
 
-			// if(Math.round(Math.random()*50) == 2){ console.log( height)}
+			// if(Math.round(Math.random()*50) == 2){ console.log( height) }
+			// if(Math.round(Math.random()*100) == 2){ console.log( tilemap ) }
 
 			chunk_geo.vertices.push(
 				new THREE.Vector3( relative_x, height, relative_z ),
@@ -417,15 +420,20 @@ function Terrain(){
 				new THREE.Vector2( 1,0 )
 			]);
 
-			chunk_geo.faces[i*2].materialIndex = 0;
-			chunk_geo.faces[(i*2)+1].materialIndex = 0;
-
-			// chunk_geo.faces[i*2].vertexColors = [ self.light, self.light, self.light ];
-			// chunk_geo.faces[(i*2)+1].vertexColors = [ self.shadow, self.shadow, self.light ];
-
-			// if(height != next_height){
+			// chunk_geo.faces[i*2].materialIndex = 0;
+			// chunk_geo.faces[(i*2)+1].materialIndex = 0;
+			// if(height == 0){
 			// 	chunk_geo.faces[i*2].materialIndex = 2;
+			// 	chunk_geo.faces[(i*2)+1].materialIndex = 2;
 			// }
+
+			chunk_geo.faces[i*2].vertexColors = [ self.light, self.light, self.light ];
+			chunk_geo.faces[(i*2)+1].vertexColors = [ self.light, self.light, self.light ];
+
+			if(height != next_height){
+				chunk_geo.faces[i*2].materialIndex = 2;
+				chunk_geo.faces[(i*2)+1].materialIndex = 2;
+			}
 
 			chunk_geo_sides.vertices.push(
 				// East face
@@ -513,6 +521,7 @@ function Terrain(){
 		// chunk_geo.mergeVertices();
 
 		var chunk = new THREE.Mesh(chunk_geo, self.terrain_texture );
+		chunk.geometry.computeVertexNormals();
 		// var chunk_sides = new THREE.Mesh( chunk_geo_sides, new THREE.MeshBasicMaterial({color: self.blue, side: THREE.DoubleSide}) );
 
 		var origin_x = (index_to_coords(tilemap_index)[0] - start_origin[0]) * (terrain.tile_width);
@@ -522,8 +531,8 @@ function Terrain(){
 
 		chunk.position.x = origin_x;
 		chunk.position.z = origin_z;
-		// chunk.position.x *= 1.01;
-		// chunk.position.z *= 1.01;
+		chunk.position.x *= 1.01;
+		chunk.position.z *= 1.01;
 
 		chunk.is_chunk = true;
 
@@ -654,12 +663,13 @@ function UI(){
 		});
 
 		$(renderer.domElement).on('mousewheel', function(event) {
-			// console.log(event.deltaX, event.deltaY, event.deltaFactor);
-			self.camera_zoom += (event.deltaY/15);
-			self.camera_zoom = self.camera_zoom > 8 ? 8 : self.camera_zoom;
-			self.camera_zoom = self.camera_zoom < 1 ? 1 : self.camera_zoom;
-			camera.zoom = self.camera_zoom;
-			camera.updateProjectionMatrix();
+			if(Math.abs(event.deltaY) >= 3){
+				self.camera_zoom += (event.deltaY/15);
+				self.camera_zoom = self.camera_zoom > 8 ? 8 : self.camera_zoom;
+				self.camera_zoom = self.camera_zoom < 1 ? 1 : self.camera_zoom;
+				camera.zoom = self.camera_zoom;
+				camera.updateProjectionMatrix();
+			}
 		});
 
 	}
