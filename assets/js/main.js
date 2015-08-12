@@ -311,7 +311,7 @@ function Terrain(){
 		// grass_t.minFilter = THREE.LinearMipMapLinearFilter;
 
 		var materials = [
-			// new THREE.MeshLambertMaterial( { color: self.green } ),
+			// new THREE.MeshLambertMaterial( { color: self.green, vertexColors: THREE.VertexColors } ),
 			new THREE.MeshLambertMaterial( { color: self.green, map: grass_t, vertexColors: THREE.VertexColors } ),
 			// new THREE.MeshLambertMaterial( { color: self.brown, vertexColors: THREE.VertexColors } ),
 			new THREE.MeshLambertMaterial( { map: grass_side, vertexColors: THREE.VertexColors } ),
@@ -370,8 +370,17 @@ function Terrain(){
 				new THREE.Vector2( 1,1 )
 			]);
 
-			chunk_geo.faces[i*2].vertexColors = [ self.light, self.light, self.light ];
-			chunk_geo.faces[(i*2)+1].vertexColors = [ self.light, self.light, self.light ];
+			adjacent_tiles = this.get_adjacent_heights(tilemap, i, height, x, z);
+
+			if( adjacent_tiles.east_side_greater ){
+				chunk_geo.faces[i*2].vertexColors = [ self.light, self.light, self.shadow ];
+				chunk_geo.faces[(i*2)+1].vertexColors = [ self.light, self.shadow, self.shadow ];
+			}
+			if( adjacent_tiles.south_side_greater ){
+				chunk_geo.faces[i*2].vertexColors = [ self.light, self.shadow, self.light ];
+				chunk_geo.faces[(i*2)+1].vertexColors = [ self.shadow, self.shadow, self.light ];
+			}
+
 		}
 
 		// Add all tile faces
@@ -385,8 +394,6 @@ function Terrain(){
 			var max_x = relative_x + this.tile_width;
 			var max_z = relative_z + this.tile_width;
 			var min_height = height - this.tile_width;
-
-			// if(Math.round(Math.random()*100) == 2){ console.log( tilemap ) }
 
 			// Check adjacent tiles
 			adjacent_tiles = this.get_adjacent_heights(tilemap, i, height, x, z);
@@ -475,7 +482,6 @@ function Terrain(){
 
 		var chunk = new THREE.Mesh(chunk_geo, self.terrain_texture );
 		chunk.geometry.computeFaceNormals();
-		// chunk.geometry.computeVertexNormals();
 
 		var origin_x = (index_to_coords(tilemap_index)[0] - start_origin[0]) * (terrain.tile_width);
 		var origin_z = (index_to_coords(tilemap_index)[1] - start_origin[1]) * (terrain.tile_width);
