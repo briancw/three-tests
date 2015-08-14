@@ -545,7 +545,19 @@ function Terrain(){
 					chunk_geo.faces[(i*2)+1].vertexColors = [ self.light, self.light, self.light ];
 				}
 			} else if(sides.length == 2){
-				if(sides[1] == 's' && sides[0] == 'e'){
+				if(sides[0] == 'nw' && sides[1] == 'ne'){
+					chunk_geo.faces[i*2].vertexColors = [ self.light, self.shadow, self.light ];
+					chunk_geo.faces[(i*2)+1].vertexColors = [ self.light, self.shadow, self.shadow ];
+				} else if(sides[0] == 'se' && sides[1] == 'sw'){
+					chunk_geo.faces[i*2].vertexColors = [ self.shadow, self.light, self.shadow ];
+					chunk_geo.faces[(i*2)+1].vertexColors = [ self.shadow, self.light, self.light ];
+				} else if(sides[0] == 'nw' && sides[1] == 'sw'){
+					chunk_geo.faces[i*2].vertexColors = [ self.light, self.light, self.shadow ];
+					chunk_geo.faces[(i*2)+1].vertexColors = [ self.shadow, self.light, self.shadow ];
+				} else if(sides[0] == 'se' && sides[1] == 'ne'){
+					chunk_geo.faces[i*2].vertexColors = [ self.shadow, self.shadow, self.light ];
+					chunk_geo.faces[(i*2)+1].vertexColors = [ self.light, self.shadow, self.light ];
+				} else if(sides[1] == 's' && sides[0] == 'e'){
 					chunk_geo.faces[i*2].vertexColors = [ self.shadow, self.shadow, self.shadow ];
 					chunk_geo.faces[(i*2)+1].vertexColors = [ self.shadow, self.shadow, self.light ];
 				} else if(sides[1] == 'w' && sides[0] == 's'){
@@ -557,6 +569,38 @@ function Terrain(){
 				} else if(sides[1] == 'n' && sides[0] == 'w'){
 					chunk_geo.faces[i*2].vertexColors = [ self.light, self.shadow, self.shadow ];
 					chunk_geo.faces[(i*2)+1].vertexColors = [ self.shadow, self.shadow, self.shadow ];
+
+				// Between two tiles
+				} else if(sides[0] == 's' && sides[1] == 'n'){
+					chunk_geo.faces[i*2].vertexColors = [ self.shadow, self.shadow, self.shadow ];
+					chunk_geo.faces[(i*2)+1].vertexColors = [ self.shadow, self.shadow, self.shadow ];
+				} else if(sides[0] == 'e' && sides[1] == 'w'){
+					chunk_geo.faces[i*2].vertexColors = [ self.shadow, self.shadow, self.shadow ];
+					chunk_geo.faces[(i*2)+1].vertexColors = [ self.shadow, self.shadow, self.shadow ];
+
+				// Weird ones
+				} else if(sides[0] == 'e' && sides[1] == 'sw'){
+					chunk_geo.faces[i*2].vertexColors = [ self.shadow, self.shadow, self.shadow ];
+					chunk_geo.faces[(i*2)+1].vertexColors = [ self.shadow, self.shadow, self.light ];
+				} else if(sides[0] == 'e' && sides[1] == 'nw'){
+					chunk_geo.faces[i*2].vertexColors = [ self.shadow, self.shadow, self.light ];
+					chunk_geo.faces[(i*2)+1].vertexColors = [ self.light, self.shadow, self.shadow ];
+				} else if(sides[0] == 'n' && sides[1] == 'sw'){
+					chunk_geo.faces[i*2].vertexColors = [ self.light, self.shadow, self.shadow ];
+					chunk_geo.faces[(i*2)+1].vertexColors = [ self.shadow, self.shadow, self.shadow ];
+				} else if(sides[0] == 'se' && sides[1] == 'nw'){
+					chunk_geo.faces[i*2].vertexColors = [ self.shadow, self.light, self.light ];
+					chunk_geo.faces[(i*2)+1].vertexColors = [ self.light, self.light, self.shadow ];
+				} else if(sides[0] == 'se' && sides[1] == 'n'){
+					chunk_geo.faces[i*2].vertexColors = [ self.light, self.shadow, self.light ];
+					chunk_geo.faces[(i*2)+1].vertexColors = [ self.light, self.shadow, self.shadow ];
+				} else if(sides[0] == 's' && sides[1] == 'ne'){
+					chunk_geo.faces[i*2].vertexColors = [ self.shadow, self.shadow, self.shadow ];
+					chunk_geo.faces[(i*2)+1].vertexColors = [ self.shadow, self.shadow, self.light ];
+					// chunk_geo.faces[(i*2)+1].materialIndex = 2;
+					// console.log('t')
+				} else {
+					// console.log( sides )
 				}
 			} else if(sides.length == 3){
 				chunk_geo.faces[i*2].vertexColors = [ self.shadow, self.shadow, self.shadow ];
@@ -668,7 +712,15 @@ function Terrain(){
 		if(typeof(occlusion_map[index]) == 'undefined'){
 			occlusion_map[index] = [direction];
 		} else {
-			if(direction != 'nw' && direction != 'se' && direction != 'sw' && direction != 'ne'){
+		if(direction == 'nw' || direction == 'se' || direction == 'sw' || direction == 'ne'){
+			if( direction == 'nw' && occlusion_map[index][0] != 'n' && occlusion_map[index][0] != 'w' ||
+				direction == 'sw' && occlusion_map[index][0] != 's' && occlusion_map[index][0] != 'w' ||
+				direction == 'se' && occlusion_map[index][0] != 's' && occlusion_map[index][0] != 'e' ||
+				direction == 'ne' && occlusion_map[index][0] != 'n' && occlusion_map[index][0] != 'e' ){
+					occlusion_map[index].push(direction);
+				}
+
+			} else {
 				occlusion_map[index].push(direction);
 			}
 		}
