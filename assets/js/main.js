@@ -768,7 +768,7 @@ function UI(){
 		var rollOverGeo = new THREE.BoxGeometry( terrain.tile_width, 1, terrain.tile_width );
 		var rollOverMaterial = new THREE.MeshBasicMaterial( { color: 0xff0000, opacity: 0.5, transparent: true } );
 		this.rollOverMesh = new THREE.Mesh( rollOverGeo, rollOverMaterial );
-		this.rollOverMesh.position.y = 0;
+		// this.rollOverMesh.position.y = 0;
 		scene.add( this.rollOverMesh );
 
 		$(renderer.domElement).mousemove(function(event){
@@ -779,7 +779,7 @@ function UI(){
 			var intersect_point = self.raycast(event);
 			if( typeof(intersect_point) != 'undefined' ){
 				self.rollOverMesh.position.copy( intersect_point[0] )
-				self.rollOverMesh.position.y = 0.1;
+				// self.rollOverMesh.position.y = 0.1;
 				self.rollOverMesh.visible = true;
 			}
 
@@ -816,10 +816,13 @@ function UI(){
 		if ( intersects.length > 0 ) {
 			var intersect = intersects[ 0 ];
 
-			var intersect_point = intersect.point.divideScalar(terrain.tile_width).floor().multiplyScalar(terrain.tile_width).addScalar( terrain.tile_width/2 );
-			var output_point = [intersect_point.x - (terrain.tile_width/4), intersect_point.z - (terrain.tile_width/4)];
+			intersect.point.y = Math.round( intersect.point.y );
+			intersect.point.divideScalar(terrain.tile_width).floor().multiplyScalar(terrain.tile_width).addScalar( terrain.tile_width/2 );
+			intersect.point.y -= 50;
+
+			var output_point = [intersect.point.x - (terrain.tile_width/4), intersect.point.z - (terrain.tile_width/4)];
 			var true_coords = [output_point[0] + origin[0], output_point[1] + origin[1]];
-			return [intersect_point, true_coords];
+			return [intersect.point, true_coords];
 		}
 	}
 
