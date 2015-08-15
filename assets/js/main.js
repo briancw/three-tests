@@ -6,9 +6,9 @@ var auto_pan = location.search.split('auto_pan=')[1];
 
 // var cube_size = Math.round(doc_diagonal / tile_width * 1.5);
 
-var cube_size = 72;
-var tile_width = 50;
-// var cube_size = 36;
+// var cube_size = 72;
+// var tile_width = 50;
+var cube_size = 36;
 var map_size = 2500000;
 // var map_size = 36;
 
@@ -281,7 +281,7 @@ function Terrain(){
 			this.render_tiles(tilemaps[i], i);
 		}
 
-		this.draw_tilemap( this.tilemaps[origin_point] );
+		scene.add( this.tilemaps[origin_point] );
 		this.map_ready = true;
 		ui.update_active_chunks();
 	}
@@ -303,12 +303,10 @@ function Terrain(){
 			var relative_z = z * this.tile_width;
 			var max_x = relative_x + this.tile_width;
 			var max_z = relative_z + this.tile_width;
-			var min_height = height - this.tile_width;
 
 			adjacent_tiles = this.get_adjacent_tops(tilemap, i, height, x, z, occlusion_map);
 
 			if( !adjacent_tiles.north_match && !adjacent_tiles.west_match ){
-				// chunk_geo.faces[ chunk_geo.faces.length - 1 ].materialIndex = 2;
 				chunk_geo.vertices.push(
 					new THREE.Vector3( relative_x, height, relative_z ),
 					new THREE.Vector3( relative_x, height, max_z ),
@@ -379,8 +377,6 @@ function Terrain(){
 			var x = tilemap[i].x;
 			var z = tilemap[i].z;
 			var height = (Math.round(tilemap[i].height * 10) * self.tile_width) - 300;
-
-			var min_height = height - this.tile_width;
 
 			// Check adjacent tiles
 			adjacent_tiles = this.get_adjacent_heights(tilemap, i, height, x, z, occlusion_map);
@@ -464,99 +460,6 @@ function Terrain(){
 			}
 		}
 
-		for(var i in occlusion_map){
-			var sides = occlusion_map[i];
-
-			if(sides.length == 1){
-				if(sides[0] == 's'){
-					chunk_geo.faces[i*2].vertexColors = [ self.shadow, self.light, self.shadow ];
-					chunk_geo.faces[(i*2)+1].vertexColors = [ self.shadow, self.light, self.light ];
-				} else if(sides[0] == 'e'){
-					chunk_geo.faces[i*2].vertexColors = [ self.shadow, self.shadow, self.light ];
-					chunk_geo.faces[(i*2)+1].vertexColors = [ self.light, self.shadow, self.light ];
-				} else if(sides[0] == 'n'){
-					chunk_geo.faces[i*2].vertexColors = [ self.light, self.shadow, self.light ];
-					chunk_geo.faces[(i*2)+1].vertexColors = [ self.light, self.shadow, self.shadow ];
-				} else if(sides[0] == 'w'){
-					chunk_geo.faces[i*2].vertexColors = [ self.light, self.light, self.shadow ];
-					chunk_geo.faces[(i*2)+1].vertexColors = [ self.shadow, self.light, self.shadow ];
-				} else if(sides[0] == 'nw'){
-					chunk_geo.faces[i*2].vertexColors = [ self.light, self.light, self.light ];
-					chunk_geo.faces[(i*2)+1].vertexColors = [ self.light, self.light, self.shadow ];
-				} else if(sides[0] == 'ne'){
-					chunk_geo.faces[i*2].vertexColors = [ self.light, self.shadow, self.light ];
-					chunk_geo.faces[(i*2)+1].vertexColors = [ self.light, self.shadow, self.light ];
-				}else if(sides[0] == 'sw'){
-					chunk_geo.faces[i*2].vertexColors = [ self.light, self.light, self.shadow ];
-					chunk_geo.faces[(i*2)+1].vertexColors = [ self.shadow, self.light, self.light ];
-				} else if(sides[0] == 'se'){
-					chunk_geo.faces[i*2].vertexColors = [ self.shadow, self.light, self.light ];
-					chunk_geo.faces[(i*2)+1].vertexColors = [ self.light, self.light, self.light ];
-				}
-			} else if(sides.length == 2){
-				if(sides[0] == 'nw' && sides[1] == 'ne'){
-					chunk_geo.faces[i*2].vertexColors = [ self.light, self.shadow, self.light ];
-					chunk_geo.faces[(i*2)+1].vertexColors = [ self.light, self.shadow, self.shadow ];
-				} else if(sides[0] == 'se' && sides[1] == 'sw'){
-					chunk_geo.faces[i*2].vertexColors = [ self.shadow, self.light, self.shadow ];
-					chunk_geo.faces[(i*2)+1].vertexColors = [ self.shadow, self.light, self.light ];
-				} else if(sides[0] == 'nw' && sides[1] == 'sw'){
-					chunk_geo.faces[i*2].vertexColors = [ self.light, self.light, self.shadow ];
-					chunk_geo.faces[(i*2)+1].vertexColors = [ self.shadow, self.light, self.shadow ];
-				} else if(sides[0] == 'se' && sides[1] == 'ne'){
-					chunk_geo.faces[i*2].vertexColors = [ self.shadow, self.shadow, self.light ];
-					chunk_geo.faces[(i*2)+1].vertexColors = [ self.light, self.shadow, self.light ];
-				} else if(sides[1] == 's' && sides[0] == 'e'){
-					chunk_geo.faces[i*2].vertexColors = [ self.shadow, self.shadow, self.shadow ];
-					chunk_geo.faces[(i*2)+1].vertexColors = [ self.shadow, self.shadow, self.light ];
-				} else if(sides[1] == 'w' && sides[0] == 's'){
-					chunk_geo.faces[i*2].vertexColors = [ self.shadow, self.light, self.shadow ];
-					chunk_geo.faces[(i*2)+1].vertexColors = [ self.shadow, self.light, self.shadow ];
-				} else if(sides[1] == 'n' && sides[0] == 'e'){
-					chunk_geo.faces[i*2].vertexColors = [ self.shadow, self.shadow, self.light ];
-					chunk_geo.faces[(i*2)+1].vertexColors = [ self.light, self.shadow, self.shadow ];
-				} else if(sides[1] == 'n' && sides[0] == 'w'){
-					chunk_geo.faces[i*2].vertexColors = [ self.light, self.shadow, self.shadow ];
-					chunk_geo.faces[(i*2)+1].vertexColors = [ self.shadow, self.shadow, self.shadow ];
-
-				// Between two tiles
-				} else if(sides[0] == 's' && sides[1] == 'n'){
-					chunk_geo.faces[i*2].vertexColors = [ self.shadow, self.shadow, self.shadow ];
-					chunk_geo.faces[(i*2)+1].vertexColors = [ self.shadow, self.shadow, self.shadow ];
-				} else if(sides[0] == 'e' && sides[1] == 'w'){
-					chunk_geo.faces[i*2].vertexColors = [ self.shadow, self.shadow, self.shadow ];
-					chunk_geo.faces[(i*2)+1].vertexColors = [ self.shadow, self.shadow, self.shadow ];
-
-				// Weird ones
-				} else if(sides[0] == 'e' && sides[1] == 'sw'){
-					chunk_geo.faces[i*2].vertexColors = [ self.shadow, self.shadow, self.shadow ];
-					chunk_geo.faces[(i*2)+1].vertexColors = [ self.shadow, self.shadow, self.light ];
-				} else if(sides[0] == 'e' && sides[1] == 'nw'){
-					chunk_geo.faces[i*2].vertexColors = [ self.shadow, self.shadow, self.light ];
-					chunk_geo.faces[(i*2)+1].vertexColors = [ self.light, self.shadow, self.shadow ];
-				} else if(sides[0] == 'n' && sides[1] == 'sw'){
-					chunk_geo.faces[i*2].vertexColors = [ self.light, self.shadow, self.shadow ];
-					chunk_geo.faces[(i*2)+1].vertexColors = [ self.shadow, self.shadow, self.shadow ];
-				} else if(sides[0] == 'se' && sides[1] == 'nw'){
-					chunk_geo.faces[i*2].vertexColors = [ self.shadow, self.light, self.light ];
-					chunk_geo.faces[(i*2)+1].vertexColors = [ self.light, self.light, self.shadow ];
-				} else if(sides[0] == 'se' && sides[1] == 'n'){
-					chunk_geo.faces[i*2].vertexColors = [ self.light, self.shadow, self.light ];
-					chunk_geo.faces[(i*2)+1].vertexColors = [ self.light, self.shadow, self.shadow ];
-				} else if(sides[0] == 's' && sides[1] == 'ne'){
-					chunk_geo.faces[i*2].vertexColors = [ self.shadow, self.shadow, self.shadow ];
-					chunk_geo.faces[(i*2)+1].vertexColors = [ self.shadow, self.shadow, self.light ];
-					// chunk_geo.faces[(i*2)+1].materialIndex = 2;
-					// console.log('t')
-				} else {
-					// console.log( sides )
-				}
-			} else if(sides.length == 3){
-				chunk_geo.faces[i*2].vertexColors = [ self.shadow, self.shadow, self.shadow ];
-				chunk_geo.faces[(i*2)+1].vertexColors = [ self.shadow, self.shadow, self.shadow ];
-			}
-		}
-
 		chunk_geo.computeBoundingSphere();
 		// chunk_geo.mergeVertices();
 
@@ -586,8 +489,6 @@ function Terrain(){
 
 			if(west_height == height){
 				adjacent_tiles.west_match = true;
-			} else if(west_height > height){
-				self.update_occlusion_map(tile_index, 'e', occlusion_map);
 			}
 		}
 		if( z > 0 ){
@@ -595,14 +496,6 @@ function Terrain(){
 
 			if(north_height == height){
 				adjacent_tiles.north_match = true;
-			} else if(north_height > height){
-				self.update_occlusion_map(tile_index, 's', occlusion_map);
-			}
-		}
-		if( x > 0 && z > 0){
-			var north_west_height = (Math.round(tilemap[(tile_index*1)-cube_size-1].height * 10) * self.tile_width) - 300;
-			if(north_west_height > height){
-				self.update_occlusion_map(tile_index, 'se', occlusion_map);
 			}
 		}
 
@@ -617,9 +510,6 @@ function Terrain(){
 
 			if(east_height > height){
 				adjacent_tiles.east_side_greater = true;
-
-				self.update_occlusion_map(tile_index, 'w', occlusion_map);
-
 			} else if(east_height < height){
 				adjacent_tiles.east_side_smaller = true;
 			}
@@ -629,56 +519,12 @@ function Terrain(){
 
 			if(south_height > height){
 				adjacent_tiles.south_side_greater = true;
-
-				self.update_occlusion_map(tile_index, 'n', occlusion_map);
-
 			} else if(south_height < height){
 				adjacent_tiles.south_side_smaller = true;
 			}
 		}
 
-		if( x < (cube_size-1) && z < (cube_size-1) ){
-			var south_east_height = (Math.round(tilemap[(tile_index*1) + cube_size + 1].height * 10) * self.tile_width) - 300;
-			if(south_east_height > height){
-				self.update_occlusion_map(tile_index, 'nw', occlusion_map);
-			}
-			if( x > 0 && z > 0){
-				var north_east_height = (Math.round(tilemap[(tile_index*1)-cube_size+1].height * 10) * self.tile_width) - 300;
-				var south_west_height = (Math.round(tilemap[(tile_index*1)+cube_size-1].height * 10) * self.tile_width) - 300;
-
-				if(north_east_height > height){
-					self.update_occlusion_map(tile_index, 'sw', occlusion_map);
-				} else if(south_west_height > height){
-					self.update_occlusion_map(tile_index, 'ne', occlusion_map);
-				}
-			}
-		}
-
 		return adjacent_tiles;
-	}
-
-	this.update_occlusion_map = function(index, direction, occlusion_map){
-		if(typeof(occlusion_map[index]) == 'undefined'){
-			occlusion_map[index] = [direction];
-		} else {
-		if(direction == 'nw' || direction == 'se' || direction == 'sw' || direction == 'ne'){
-			if( direction == 'nw' && occlusion_map[index][0] != 'n' && occlusion_map[index][0] != 'w' ||
-				direction == 'sw' && occlusion_map[index][0] != 's' && occlusion_map[index][0] != 'w' ||
-				direction == 'se' && occlusion_map[index][0] != 's' && occlusion_map[index][0] != 'e' ||
-				direction == 'ne' && occlusion_map[index][0] != 'n' && occlusion_map[index][0] != 'e' ){
-					occlusion_map[index].push(direction);
-				}
-
-			} else {
-				occlusion_map[index].push(direction);
-			}
-		}
-	}
-
-	this.draw_tilemap = function(tilemap){
-
-		scene.add( tilemap );
-
 	}
 
 }
