@@ -7,7 +7,7 @@ var auto_pan = location.search.split('auto_pan=')[1];
 // var cube_size = Math.round(doc_diagonal / tile_width * 1.5);
 
 // var cube_size = 44;
-// var tile_width = 80;
+// var tile_width = 50;
 var cube_size = 36;
 var adjusted_cube_size = cube_size + 1;
 var map_size = 2500000;
@@ -238,37 +238,25 @@ function Terrain(){
 		// self.green = 0x326800;
 		self.green = 0x417a2d;
 		self.blue = 0x254e78;
-		self.textures = {};
+		// self.textures = {};
 
-		var texture_files = [
-			'grass_top.png',
-			'grass_side.png'
-		];
+		// var texture_files = [
+		// 	'grass_top.png',
+		// 	'grass_side.png'
+		// ];
 
-		for(var i in texture_files){
-			var basename = texture_files[i].split('.');
-			self.textures[basename[0]] = THREE.ImageUtils.loadTexture('assets/img/' + texture_files[i] );
-		// 	self.textures[basename[0]].wrapS = self.textures[basename[0]].wrapT = THREE.RepeatWrapping;
-		// 	self.textures[basename[0]].repeat.set( cube_size, cube_size );
-		}
+		// for(var i in texture_files){
+		// 	var basename = texture_files[i].split('.');
+		// 	self.textures[basename[0]] = THREE.ImageUtils.loadTexture('assets/img/' + texture_files[i] );
+		// }
 
-		self.light = new THREE.Color( 0xffffff );
-		self.shadow = new THREE.Color( 0x505050 );
+		// self.light = new THREE.Color( 0xffffff );
+		// self.shadow = new THREE.Color( 0x505050 );
 
-		// grass_t.magFilter = THREE.NearestFilter;
-		// grass_t.minFilter = THREE.LinearMipMapLinearFilter;
-		// grass_side.magFilter = THREE.NearestFilter;
-		// grass_side.minFilter = THREE.LinearMipMapLinearFilter;
-
-		var materials = [
-			// new THREE.MeshLambertMaterial( { color: self.green, vertexColors: THREE.VertexColors } ),
-			new THREE.MeshLambertMaterial( { color: self.green, map: self.textures.grass_top, vertexColors: THREE.VertexColors } ),
-			// new THREE.MeshLambertMaterial( { color: self.brown, vertexColors: THREE.VertexColors } ),
-			new THREE.MeshLambertMaterial( { map: self.textures.grass_side, vertexColors: THREE.VertexColors } ),
-			new THREE.MeshLambertMaterial( { color: self.blue } ),
-			new THREE.MeshLambertMaterial( { color: self.brown, vertexColors: THREE.VertexColors } )
-		];
-		self.terrain_texture = new THREE.MeshFaceMaterial(materials);
+		var atlas_tex_file = THREE.ImageUtils.loadTexture('assets/img/new_atlas.png');
+		self.atlas_tex = new THREE.MeshBasicMaterial({ map: atlas_tex_file });
+		self.atlas_tex.magFilter = THREE.NearestFilter;
+		self.atlas_tex.minFilter = THREE.LinearMipMapLinearFilter;
 
 	})();
 
@@ -284,181 +272,119 @@ function Terrain(){
 	}
 
 	this.render_tiles = function(tilemap, tilemap_index){
-		var chunk_geo = new THREE.Geometry();
+		var chunk_geometry = new THREE.BufferGeometry();
 
-		// Add all required tile tops
-		var vertex_index = 0;
-		var vertex_map = [];
-		var occlusion_map = {};
+		var vertex_positions = [];
+		var uv_map = [];
 
 		for(var i in tilemap){
-			var x = tilemap[i].x;
-			var z = tilemap[i].z;
+			var this_height = tilemap[i].height;
+			var bottom_height = this_height - self.tile_width;
 
-			var height = tilemap[i].height;
-
-			var relative_x = x * this.tile_width;
-			var relative_z = z * this.tile_width;
-			var max_x = relative_x + this.tile_width;
-			var max_z = relative_z + this.tile_width;
-
-			var adjacent_tiles = this.get_adjacent_tops(tilemap, i, height, x, z);
-
-			if( !adjacent_tiles.north_match && !adjacent_tiles.west_match ){
-				chunk_geo.vertices.push(
-					new THREE.Vector3( relative_x, height, relative_z ),
-					new THREE.Vector3( relative_x, height, max_z ),
-					new THREE.Vector3( max_x, height, relative_z ),
-					new THREE.Vector3( max_x, height, max_z )
-				);
-
-				var tmp_vertex_map = [vertex_index, vertex_index + 1, vertex_index + 2, vertex_index + 3];
-				vertex_index += 4;
-
-			} else if( !adjacent_tiles.north_match ){ // Only West Matches
-				chunk_geo.vertices.push(
-					new THREE.Vector3( max_x, height, relative_z ),
-					new THREE.Vector3( max_x, height, max_z )
-				);
-
-				var tmp_vertex_map = [vertex_map[(i*1)-1][2], vertex_map[(i*1)-1][3], vertex_index, vertex_index + 1]
-				vertex_index += 2;
-
-			} else if( !adjacent_tiles.west_match ){ // Only North Matches
-				chunk_geo.vertices.push(
-					new THREE.Vector3( relative_x, height, max_z ),
-					new THREE.Vector3( max_x, height, max_z )
-				);
-
-				var tmp_vertex_map = [vertex_map[i - adjusted_cube_size][1], vertex_index, vertex_map[i - adjusted_cube_size][3], vertex_index + 1];
-				vertex_index += 2;
-
+			if( tilemap[i].x < cube_size ){
+				var east_height = tilemap[ (i*1)+1 ].height;
 			} else {
-				chunk_geo.vertices.push(
-					new THREE.Vector3( max_x, height, max_z )
+				var east_height = -10;
+			}
+
+			if( tilemap[i].z < cube_size ){
+				var south_height = tilemap[ (i*1) + cube_size + 1 ].height;
+			} else {
+				var south_height = -10;
+			}
+
+			var x_min = tilemap[i].x*self.tile_width;
+			var x_max = (tilemap[i].x*self.tile_width) + self.tile_width;
+			var z_min = tilemap[i].z*self.tile_width;
+			var z_max = (tilemap[i].z*self.tile_width) + self.tile_width;
+
+			vertex_positions.push(
+				[ x_min, this_height, z_min ],
+				[ x_max, this_height, z_max ],
+				[ x_max, this_height, z_min ],
+
+				[ x_min, this_height, z_min ],
+				[ x_min, this_height, z_max ],
+				[ x_max, this_height, z_max ]
+			);
+
+			uv_map.push(
+				[0, 0.5],
+				[1, 1],
+				[0, 1],
+
+				[0, 0.5],
+				[1, 0.5],
+				[1, 1]
+			);
+
+			if(east_height < this_height){ // If East side lesser
+				vertex_positions.push(
+					[ x_max, this_height, z_max ],
+					[ x_max, bottom_height, z_max ],
+					[ x_max, bottom_height, z_min ],
+
+					[ x_max, this_height, z_max ],
+					[ x_max, bottom_height, z_min ],
+					[ x_max, this_height, z_min ]
 				);
 
-				var tmp_vertex_map = [vertex_map[(i*1)-1][2], vertex_map[(i*1)-1][3], vertex_map[i - adjusted_cube_size][3], vertex_index];
-				vertex_index += 1;
+				uv_map.push(
+					[0, 0.5],
+					[0, 0],
+					[1, 0],
+
+					[0, 0.5],
+					[1, 0],
+					[1, 0.5]
+				);
 			}
 
-			vertex_map.push( tmp_vertex_map );
+			if(south_height < this_height){ // If South side lesser
+				vertex_positions.push(
+					[ x_min, this_height, z_max ],
+					[ x_min, bottom_height, z_max ],
+					[ x_max, bottom_height, z_max ],
 
-			if(x < cube_size && z < cube_size){
-				chunk_geo.faces.push( new THREE.Face3( tmp_vertex_map[0], tmp_vertex_map[1], tmp_vertex_map[2] ) );
-				chunk_geo.faces.push( new THREE.Face3( tmp_vertex_map[2], tmp_vertex_map[1], tmp_vertex_map[3] ) );
+					[ x_min, this_height, z_max ],
+					[ x_max, bottom_height, z_max ],
+					[ x_max, this_height, z_max ]
+				);
 
-				chunk_geo.faceVertexUvs[0].push([
-					new THREE.Vector2( 0,1 ),
-					new THREE.Vector2( 0,0 ),
-					new THREE.Vector2( 1,1 )
-				]);
-				chunk_geo.faceVertexUvs[0].push([
-					new THREE.Vector2( 1,1 ),
-					new THREE.Vector2( 0,0 ),
-					new THREE.Vector2( 1,0 )
-				]);
+				uv_map.push(
+					[0, 0.5],
+					[0, 0],
+					[1, 0],
+
+					[0, 0.5],
+					[1, 0],
+					[1, 0.5]
+				);
 			}
-
 
 		}
 
-		// Add all tile faces
-		for(var i in tilemap){
-			// continue;
-			var x = tilemap[i].x;
-			var z = tilemap[i].z;
+		var vertices = new Float32Array( vertex_positions.length * 3 );
+		var uvs = new Float32Array( uv_map.length * 2 );
 
-			var height = tilemap[i].height;
-
-			// Check adjacent tiles
-			var adjacent_tiles = this.get_adjacent_sides(tilemap, i, height, x, z);
-
-			if( adjacent_tiles.east_side_greater || adjacent_tiles.east_side_smaller){
-
-				chunk_geo.faces.push( new THREE.Face3( vertex_map[(i*1)+1][0], vertex_map[i][2], vertex_map[(i*1)+1][1] ) );
-				chunk_geo.faces.push( new THREE.Face3( vertex_map[(i*1)+1][1], vertex_map[i][2], vertex_map[i][3] ) );
-
-				chunk_geo.faces[ chunk_geo.faces.length - 1 ].materialIndex = 1;
-				chunk_geo.faces[ chunk_geo.faces.length - 2 ].materialIndex = 1;
-
-				if( adjacent_tiles.east_side_greater ){
-
-					chunk_geo.faceVertexUvs[0].push([
-						new THREE.Vector2( 0,1 ),
-						new THREE.Vector2( 0,0 ),
-						new THREE.Vector2( 1,1 )
-					]);
-					chunk_geo.faceVertexUvs[0].push([
-						new THREE.Vector2( 1,1 ),
-						new THREE.Vector2( 0,0 ),
-						new THREE.Vector2( 1,0 )
-					]);
-					chunk_geo.faces[ chunk_geo.faces.length - 2 ].vertexColors = [ self.light, self.shadow, self.light ];
-					chunk_geo.faces[ chunk_geo.faces.length - 1 ].vertexColors = [ self.light, self.shadow, self.shadow ];
-
-				} else {
-					chunk_geo.faceVertexUvs[0].push([
-						new THREE.Vector2( 1,0 ),
-						new THREE.Vector2( 1,1 ),
-						new THREE.Vector2( 0,0 )
-					]);
-					chunk_geo.faceVertexUvs[0].push([
-						new THREE.Vector2( 0,0 ),
-						new THREE.Vector2( 1,1 ),
-						new THREE.Vector2( 0,1 )
-					]);
-					chunk_geo.faces[ chunk_geo.faces.length - 2 ].vertexColors = [ self.shadow, self.light, self.shadow ];
-					chunk_geo.faces[ chunk_geo.faces.length - 1 ].vertexColors = [ self.shadow, self.light, self.light ];
-				}
-
-			}
-
-			if( adjacent_tiles.south_side_greater || adjacent_tiles.south_side_smaller){
-				chunk_geo.faces.push( new THREE.Face3( vertex_map[i][1], vertex_map[(i*1)+adjusted_cube_size][0], vertex_map[i][3] ) );
-				chunk_geo.faces.push( new THREE.Face3( vertex_map[(i*1)+adjusted_cube_size][0], vertex_map[(i*1)+adjusted_cube_size][2], vertex_map[i][3] ) );
-
-				chunk_geo.faces[ chunk_geo.faces.length - 1 ].materialIndex = 1;
-				chunk_geo.faces[ chunk_geo.faces.length - 2 ].materialIndex = 1;
-
-				if( adjacent_tiles.south_side_greater ){
-
-					chunk_geo.faceVertexUvs[0].push([
-						new THREE.Vector2( 1,0 ),
-						new THREE.Vector2( 1,1 ),
-						new THREE.Vector2( 0,0 )
-					]);
-					chunk_geo.faceVertexUvs[0].push([
-						new THREE.Vector2( 1,1 ),
-						new THREE.Vector2( 0,1 ),
-						new THREE.Vector2( 0,0 )
-					]);
-					chunk_geo.faces[ chunk_geo.faces.length - 2 ].vertexColors = [ self.shadow, self.light, self.shadow ];
-					chunk_geo.faces[ chunk_geo.faces.length - 1 ].vertexColors = [ self.light, self.light, self.shadow ];
-
-				} else {
-					chunk_geo.faceVertexUvs[0].push([
-						new THREE.Vector2( 0,1 ),
-						new THREE.Vector2( 0,0 ),
-						new THREE.Vector2( 1,1 )
-					]);
-					chunk_geo.faceVertexUvs[0].push([
-						new THREE.Vector2( 0,0 ),
-						new THREE.Vector2( 1,0 ),
-						new THREE.Vector2( 1,1 )
-					]);
-					chunk_geo.faces[ chunk_geo.faces.length - 2 ].vertexColors = [ self.light, self.shadow, self.light ];
-					chunk_geo.faces[ chunk_geo.faces.length - 1 ].vertexColors = [ self.shadow, self.shadow, self.light ];
-				}
-
-			}
+		for ( var i = 0; i < vertex_positions.length; i++ ) {
+			vertices[ i*3 + 0 ] = vertex_positions[i][0];
+			vertices[ i*3 + 1 ] = vertex_positions[i][1];
+			vertices[ i*3 + 2 ] = vertex_positions[i][2];
 		}
 
-		chunk_geo.computeBoundingSphere();
-		// chunk_geo.mergeVertices();
+		for ( var i = 0; i < uv_map.length; i++ ) {
+			uvs[ i*2 + 0 ] = uv_map[i][0];
+			uvs[ i*2 + 1 ] = uv_map[i][1];
+		}
 
-		var chunk = new THREE.Mesh(chunk_geo, self.terrain_texture );
-		chunk.geometry.computeFaceNormals();
+		chunk_geometry.addAttribute('uv', new THREE.BufferAttribute(uvs, 2) );
+		chunk_geometry.addAttribute( 'position', new THREE.BufferAttribute( vertices, 3 ) );
+
+		chunk_geometry.computeBoundingSphere();
+		// chunk_geometry.computeFaceNormals();
+
+		var chunk = new THREE.Mesh( chunk_geometry, self.atlas_tex );
 
 		var origin_x = (index_to_coords(tilemap_index)[0] - start_origin[0]) * (terrain.tile_width);
 		var origin_z = (index_to_coords(tilemap_index)[1] - start_origin[1]) * (terrain.tile_width);
