@@ -76,23 +76,19 @@
 	var img_tex_file = THREE.ImageUtils.loadTexture('assets/img/grass_top.png');
 	var img_tex = new THREE.MeshBasicMaterial({ map: img_tex_file, color: green });
 
-	// var raycaster = new THREE.Raycaster();
-	// var mouse = new THREE.Vector2();
-	// var objects = [];
-	// var rollOverGeo = new THREE.BoxGeometry( 50, 50, 50 );
-	// var rollOverMaterial = new THREE.MeshBasicMaterial( { color: 0xff0000, opacity: 0.5, transparent: true } );
-	// rollOverMesh = new THREE.Mesh( rollOverGeo, rollOverMaterial );
-	// scene.add( rollOverMesh );
+	var foog = new THREE.BoxGeometry(100, 100, 100);
+	var foo = new THREE.Mesh(foog, new THREE.MeshLambertMaterial({ color: 0xff0000 }));
+	scene.add(foo);
 
 	function create_buffer_geo(){
-		console.time('t');
+		// console.time('t');
 		// var material = new THREE.MeshBasicMaterial( { color: 0xffffff * Math.random() } );
 		var material = new THREE.MeshBasicMaterial( { map: img_tex_file, color: 0xffffff * Math.random() } );
 
 		var geometry = new THREE.BufferGeometry();
 
-		var tile_width = 40;
-		var tile_count = 36;
+		var tile_width = 20;
+		var tile_count = 100;
 
 		var tile_tops = {};
 
@@ -103,6 +99,7 @@
 			for(var iz = 0; iz < tile_count; iz++){
 				// var rnd_height = Math.random() * 10;
 				var rnd_height = 0;
+				var bottom_height = rnd_height - tile_width;
 
 				tile_tops.vertex_positions.push(
 					[ (ix*tile_width), rnd_height, iz*tile_width ],
@@ -123,6 +120,50 @@
 					[1, 0],
 					[1, 1]
 				);
+
+				if(1){ // If East side lesser
+					tile_tops.vertex_positions.push(
+						[ (ix*tile_width), rnd_height, (iz*tile_width) ],
+						[ (ix*tile_width), bottom_height, (iz*tile_width) ],
+						[ (ix*tile_width), bottom_height, (iz*tile_width) + tile_width ],
+
+						[ (ix*tile_width), rnd_height, (iz*tile_width) ],
+						[ (ix*tile_width), bottom_height, (iz*tile_width) + tile_width ],
+						[ (ix*tile_width), rnd_height, (iz*tile_width) + tile_width ]
+					);
+
+					tile_tops.uv_map.push(
+						[0, 0],
+						[1, 1],
+						[0, 1],
+
+						[0, 0],
+						[1, 0],
+						[1, 1]
+					);
+				}
+
+				if(1){ // If South side lesser
+					tile_tops.vertex_positions.push(
+						[ (ix*tile_width) + tile_width , rnd_height, (iz*tile_width) ],
+						[ (ix*tile_width) + tile_width , bottom_height, (iz*tile_width) ],
+						[ (ix*tile_width), bottom_height, (iz*tile_width) ],
+
+						[ (ix*tile_width) + tile_width, rnd_height, (iz*tile_width) ],
+						[ (ix*tile_width), bottom_height, (iz*tile_width) ],
+						[ (ix*tile_width), rnd_height, (iz*tile_width) ]
+					);
+
+					tile_tops.uv_map.push(
+						[0, 0],
+						[1, 1],
+						[0, 1],
+
+						[0, 0],
+						[1, 0],
+						[1, 1]
+					);
+				}
 			}
 		}
 
@@ -150,43 +191,25 @@
 
 		mesh.position.x -= (tile_width * tile_count / 2);
 		mesh.position.z -= (tile_width * tile_count / 2);
-		console.timeEnd('t')
+		// console.timeEnd('t')
 		return mesh;
 	}
-
-	var foog = new THREE.BoxGeometry(100, 100, 100);
-	// var foo = new THREE.Mesh(foog, new THREE.MeshLambertMaterial({ color: 0xff0000 }));
-	var foo = new THREE.Mesh(foog, new THREE.MeshLambertMaterial({ color: 0xff0000 }));
-
-	// setInterval(function(){
-	// 	foo.rotateX( Math.PI / 180 * 1);
-	// 	foo.rotateX( Math.PI / 180 * 1);
-	// }, 15);
-
-	scene.add(foo);
 
 	var chunks = {};
 
 	// chunks[0] = create_buffer_geo();
 	// console.log( chunks[0] );
-
 	// scene.add( chunks[0] );
 
 	var i = 0;
 	setInterval(function(){
+		console.time('t');
 		chunks[i] = create_buffer_geo();
+		console.timeEnd('t');
 		scene.remove( chunks[i - 1] );
 		scene.add( chunks[i] );
 		i++;
 	}, 1500);
-
-	// scene.add( chunks[0] );
-	// console.log( mesh )
-	// setInterval(function(){
-	// 	mesh.rotateX( Math.PI / 180 * 5 );
-	// 	mesh.rotateY( Math.PI / 180 * 5 );
-	// 	mesh.rotateZ( Math.PI / 180 * 5 );
-	// }, 60);
 
 	</script>
 
