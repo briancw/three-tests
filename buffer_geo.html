@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title></title>
+	<link rel="stylesheet" type="text/css" href="assets/dist/all.min.css">
+</head>
+<body>
+
+	<script src="assets/js_libs/jquery.js"></script>
+	<script src="assets/js_libs/three.min.js"></script>
+	<script src="assets/js_libs/stats.js"></script>
+	<script src="assets/js_libs/renderstats.js"></script>
+
+	<script>
+
+	$(document).ready(function(){
+		window.requestAnimFrame = (function(){
+			return window.requestAnimationFrame		||
+				window.webkitRequestAnimationFrame	||
+				window.mozRequestAnimationFrame		||
+				function( callback ){
+					window.setTimeout(callback, 1000 / 60);
+				};
+		})();
+
+		(function animloop(){
+			requestAnimFrame(animloop);
+
+			foo.rotateX( Math.PI / 180 * 1);
+			foo.rotateZ( Math.PI / 180 * 0.5);
+
+			renderer.render( scene, camera );
+			stats.update();
+			rstats.update(renderer);
+		})();
+	});
+
+	renderer = new THREE.WebGLRenderer();
+	renderer.setClearColor( 0xf0f0f0 );
+	renderer.setPixelRatio( window.devicePixelRatio );
+	renderer.setSize( window.innerWidth, window.innerHeight );
+
+	$(renderer.domElement).addClass('canvas');
+	$('body').append(renderer.domElement);
+
+	stats = new Stats();
+	stats.domElement.style.position = 'absolute';
+	stats.domElement.style.top = '0px';
+	$('body').append(stats.domElement);
+
+	rstats = new THREEx.RendererStats();
+	rstats.domElement.style.position = 'absolute';
+	rstats.domElement.style.left = '0px';
+	rstats.domElement.style.bottom = '0px';
+	$('body').append( rstats.domElement );
+
+	scene = new THREE.Scene();
+
+	var aspect = window.innerWidth / window.innerHeight;
+	var d = 800;
+	camera = new THREE.OrthographicCamera( - d * aspect, d * aspect, d, - d, -2000, 2000 );
+	camera.position.set(-10, 8, -10);
+	camera.lookAt( scene.position );
+
+	var directionalLight = new THREE.DirectionalLight( 0xffffff );
+	directionalLight.position.x = Math.random() - 0.5;
+	directionalLight.position.y = 400;
+	directionalLight.position.z = Math.random() - 0.5;
+	directionalLight.position.normalize();
+	scene.add( directionalLight );
+
+	var brown = 0x77543c;
+	var green = 0x326800;
+	var blue = 0x254e78;
+
+	var img_tex_file = THREE.ImageUtils.loadTexture('assets/img/grass_top.png');
+	var img_tex = new THREE.MeshBasicMaterial({ map: img_tex_file, color: green });
+
+	// var raycaster = new THREE.Raycaster();
+	// var mouse = new THREE.Vector2();
+	// var objects = [];
+	// var rollOverGeo = new THREE.BoxGeometry( 50, 50, 50 );
+	// var rollOverMaterial = new THREE.MeshBasicMaterial( { color: 0xff0000, opacity: 0.5, transparent: true } );
+	// rollOverMesh = new THREE.Mesh( rollOverGeo, rollOverMaterial );
+	// scene.add( rollOverMesh );
+
+	function create_buffer_geo(){
+		console.time('t');
+		// var material = new THREE.MeshBasicMaterial( { color: 0xffffff * Math.random() } );
+		var material = new THREE.MeshBasicMaterial( { map: img_tex_file, color: 0xffffff * Math.random() } );
+
+		var geometry = new THREE.BufferGeometry();
+
+		var tile_width = 40;
+		var tile_count = 36;
+
+		var tile_tops = {};
+
+		tile_tops.vertex_positions = [];
+		tile_tops.uv_map = [];
+
+		for(var ix = 0; ix < tile_count; ix++){
+			for(var iz = 0; iz < tile_count; iz++){
+				// var rnd_height = Math.random() * 10;
+				var rnd_height = 0;
+
+				tile_tops.vertex_positions.push(
+					[ (ix*tile_width), rnd_height, iz*tile_width ],
+					[ (ix*tile_width) + tile_width, rnd_height, (iz*tile_width) + tile_width ],
+					[ (ix*tile_width) + tile_width, rnd_height, iz*tile_width ],
+
+					[ (ix*tile_width), rnd_height, iz*tile_width ],
+					[ (ix*tile_width), rnd_height, (iz*tile_width) + tile_width ],
+					[ (ix*tile_width) + tile_width, rnd_height, (iz*tile_width) + tile_width ]
+				);
+
+				tile_tops.uv_map.push(
+					[0, 0],
+					[1, 1],
+					[0, 1],
+
+					[0, 0],
+					[1, 0],
+					[1, 1]
+				);
+			}
+		}
+
+		var vertices = new Float32Array( tile_tops.vertex_positions.length * 3 );
+		var uvs = new Float32Array( tile_tops.uv_map.length * 2 );
+
+		for ( var i = 0; i < tile_tops.vertex_positions.length; i++ ) {
+			vertices[ i*3 + 0 ] = tile_tops.vertex_positions[i][0];
+			vertices[ i*3 + 1 ] = tile_tops.vertex_positions[i][1];
+			vertices[ i*3 + 2 ] = tile_tops.vertex_positions[i][2];
+		}
+
+		for ( var i = 0; i < tile_tops.uv_map.length; i++ ) {
+			uvs[ i*2 + 0 ] = tile_tops.uv_map[i][0];
+			uvs[ i*2 + 1 ] = tile_tops.uv_map[i][1];
+		}
+
+		geometry.addAttribute('uv', new THREE.BufferAttribute(uvs, 2) );
+		geometry.addAttribute( 'position', new THREE.BufferAttribute( vertices, 3 ) );
+
+		geometry.computeBoundingSphere();
+		// geometry.computeFaceNormals();
+
+		var mesh = new THREE.Mesh( geometry, material );
+
+		mesh.position.x -= (tile_width * tile_count / 2);
+		mesh.position.z -= (tile_width * tile_count / 2);
+		console.timeEnd('t')
+		return mesh;
+	}
+
+	var foog = new THREE.BoxGeometry(100, 100, 100);
+	// var foo = new THREE.Mesh(foog, new THREE.MeshLambertMaterial({ color: 0xff0000 }));
+	var foo = new THREE.Mesh(foog, new THREE.MeshLambertMaterial({ color: 0xff0000 }));
+
+	// setInterval(function(){
+	// 	foo.rotateX( Math.PI / 180 * 1);
+	// 	foo.rotateX( Math.PI / 180 * 1);
+	// }, 15);
+
+	scene.add(foo);
+
+	var chunks = {};
+
+	// chunks[0] = create_buffer_geo();
+	// console.log( chunks[0] );
+
+	// scene.add( chunks[0] );
+
+	var i = 0;
+	setInterval(function(){
+		chunks[i] = create_buffer_geo();
+		scene.remove( chunks[i - 1] );
+		scene.add( chunks[i] );
+		i++;
+	}, 1500);
+
+	// scene.add( chunks[0] );
+	// console.log( mesh )
+	// setInterval(function(){
+	// 	mesh.rotateX( Math.PI / 180 * 5 );
+	// 	mesh.rotateY( Math.PI / 180 * 5 );
+	// 	mesh.rotateZ( Math.PI / 180 * 5 );
+	// }, 60);
+
+	</script>
+
+	<div class="error_message_box">
+		<div class="error_message"></div>
+	</div>
+</body>
+</html>
