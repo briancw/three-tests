@@ -73,66 +73,68 @@
 	var green = 0x326800;
 	var blue = 0x254e78;
 
-	var img_tex_file = THREE.ImageUtils.loadTexture('assets/img/grass_top.png');
-	var img_tex = new THREE.MeshBasicMaterial({ map: img_tex_file, color: green });
+	var img_tex_file = THREE.ImageUtils.loadTexture('assets/img/atlas.png');
+	// var img_tex = new THREE.MeshBasicMaterial({ map: img_tex_file, color: green });
+	var img_tex = new THREE.MeshBasicMaterial({ map: img_tex_file });
+
+	img_tex.magFilter = THREE.NearestFilter;
+	img_tex.minFilter = THREE.LinearMipMapLinearFilter;
 
 	var foog = new THREE.BoxGeometry(100, 100, 100);
 	var foo = new THREE.Mesh(foog, new THREE.MeshLambertMaterial({ color: 0xff0000 }));
 	scene.add(foo);
 
 	function create_buffer_geo(){
-		// console.time('t');
-		// var material = new THREE.MeshBasicMaterial( { color: 0xffffff * Math.random() } );
-		var material = new THREE.MeshBasicMaterial( { map: img_tex_file, color: 0xffffff * Math.random() } );
-
 		var geometry = new THREE.BufferGeometry();
 
-		var tile_width = 20;
-		var tile_count = 100;
+		var tile_width = 50;
+		var tile_count = 36;
 
-		var tile_tops = {};
-
-		tile_tops.vertex_positions = [];
-		tile_tops.uv_map = [];
+		vertex_positions = [];
+		uv_map = [];
 
 		for(var ix = 0; ix < tile_count; ix++){
 			for(var iz = 0; iz < tile_count; iz++){
-				// var rnd_height = Math.random() * 10;
-				var rnd_height = Math.random() * 50;
+				var rnd_height = Math.round(Math.random() * 100);
 				var bottom_height = rnd_height - tile_width;
 
-				tile_tops.vertex_positions.push(
-					[ (ix*tile_width), rnd_height, iz*tile_width ],
-					[ (ix*tile_width) + tile_width, rnd_height, (iz*tile_width) + tile_width ],
-					[ (ix*tile_width) + tile_width, rnd_height, iz*tile_width ],
+				var x_min = ix*tile_width;
+				var x_max = (ix*tile_width) + tile_width;
+				var z_min = iz*tile_width;
+				var z_max = (iz*tile_width) + tile_width;
 
-					[ (ix*tile_width), rnd_height, iz*tile_width ],
-					[ (ix*tile_width), rnd_height, (iz*tile_width) + tile_width ],
-					[ (ix*tile_width) + tile_width, rnd_height, (iz*tile_width) + tile_width ]
+				vertex_positions.push(
+					[ x_min, rnd_height, z_min ],
+					[ x_max, rnd_height, z_max ],
+					[ x_max, rnd_height, z_min ],
+
+					[ x_min, rnd_height, z_min ],
+					[ x_min, rnd_height, z_max ],
+					[ x_max, rnd_height, z_max ]
 				);
 
-				tile_tops.uv_map.push(
-					[0, 0],
+				uv_map.push(
+					[0, 0.5],
 					[1, 1],
 					[0, 1],
 
-					[0, 0],
-					[1, 0],
+					[0, 0.5],
+					[1, 0.5],
 					[1, 1]
 				);
 
-				if(1){ // If East side lesser
-					tile_tops.vertex_positions.push(
-						[ (ix*tile_width), rnd_height, (iz*tile_width) ],
-						[ (ix*tile_width), bottom_height, (iz*tile_width) ],
-						[ (ix*tile_width), bottom_height, (iz*tile_width) + tile_width ],
+				if(0){ // If North side lesser
+					vertex_positions.push(
+						[ x_max, rnd_height, z_max ],
+						[ x_max, bottom_height, z_max ],
+						[ x_min, bottom_height, z_max ],
 
-						[ (ix*tile_width), rnd_height, (iz*tile_width) ],
-						[ (ix*tile_width), bottom_height, (iz*tile_width) + tile_width ],
-						[ (ix*tile_width), rnd_height, (iz*tile_width) + tile_width ]
+						[ x_max, rnd_height, z_max ],
+						[ x_min, bottom_height, z_max ],
+						[ x_min, rnd_height, z_max ]
 					);
 
-					tile_tops.uv_map.push(
+					uv_map.push(
 						[0, 0],
 						[1, 1],
 						[0, 1],
@@ -140,45 +142,89 @@
 						[0, 0],
 						[1, 0],
 						[1, 1]
+					);
+				}
+
+				if(1){ // If East side lesser
+					vertex_positions.push(
+						[ x_min, rnd_height, z_min ],
+						[ x_min, bottom_height, z_min ],
+						[ x_min, bottom_height, z_max ],
+
+						[ x_min, rnd_height, z_min ],
+						[ x_min, bottom_height, z_max ],
+						[ x_min, rnd_height, z_max ]
+					);
+
+					uv_map.push(
+						[0, 0.5],
+						[0, 0],
+						[1, 0],
+
+						[0, 0.5],
+						[1, 0],
+						[1, 0.5]
 					);
 				}
 
 				if(1){ // If South side lesser
-					tile_tops.vertex_positions.push(
-						[ (ix*tile_width) + tile_width , rnd_height, (iz*tile_width) ],
-						[ (ix*tile_width) + tile_width , bottom_height, (iz*tile_width) ],
-						[ (ix*tile_width), bottom_height, (iz*tile_width) ],
+					vertex_positions.push(
+						[ x_max , rnd_height, z_min ],
+						[ x_max , bottom_height, z_min ],
+						[ x_min, bottom_height, z_min ],
 
-						[ (ix*tile_width) + tile_width, rnd_height, (iz*tile_width) ],
-						[ (ix*tile_width), bottom_height, (iz*tile_width) ],
-						[ (ix*tile_width), rnd_height, (iz*tile_width) ]
+						[ x_max, rnd_height, z_min ],
+						[ x_min, bottom_height, z_min ],
+						[ x_min, rnd_height, z_min ]
 					);
 
-					tile_tops.uv_map.push(
-						[0, 0],
-						[1, 1],
-						[0, 1],
-
+					uv_map.push(
+						[0, 0.5],
 						[0, 0],
 						[1, 0],
-						[1, 1]
+
+						[0, 0.5],
+						[1, 0],
+						[1, 0.5]
 					);
 				}
+
+				if(0){ // If West side lesser
+						vertex_positions.push(
+							[ x_max, rnd_height, z_min ],
+							[ x_max, bottom_height, z_min ],
+							[ x_max, bottom_height, z_max ],
+
+							[ x_max, rnd_height, z_min ],
+							[ x_max, bottom_height, z_max ],
+							[ x_max, rnd_height, z_max ]
+						);
+
+						uv_map.push(
+							[0, 0],
+							[1, 1],
+							[0, 1],
+
+							[0, 0],
+							[1, 0],
+							[1, 1]
+						);
+					}
 			}
 		}
 
-		var vertices = new Float32Array( tile_tops.vertex_positions.length * 3 );
-		var uvs = new Float32Array( tile_tops.uv_map.length * 2 );
+		var vertices = new Float32Array( vertex_positions.length * 3 );
+		var uvs = new Float32Array( uv_map.length * 2 );
 
-		for ( var i = 0; i < tile_tops.vertex_positions.length; i++ ) {
-			vertices[ i*3 + 0 ] = tile_tops.vertex_positions[i][0];
-			vertices[ i*3 + 1 ] = tile_tops.vertex_positions[i][1];
-			vertices[ i*3 + 2 ] = tile_tops.vertex_positions[i][2];
+		for ( var i = 0; i < vertex_positions.length; i++ ) {
+			vertices[ i*3 + 0 ] = vertex_positions[i][0];
+			vertices[ i*3 + 1 ] = vertex_positions[i][1];
+			vertices[ i*3 + 2 ] = vertex_positions[i][2];
 		}
 
-		for ( var i = 0; i < tile_tops.uv_map.length; i++ ) {
-			uvs[ i*2 + 0 ] = tile_tops.uv_map[i][0];
-			uvs[ i*2 + 1 ] = tile_tops.uv_map[i][1];
+		for ( var i = 0; i < uv_map.length; i++ ) {
+			uvs[ i*2 + 0 ] = uv_map[i][0];
+			uvs[ i*2 + 1 ] = uv_map[i][1];
 		}
 
 		geometry.addAttribute('uv', new THREE.BufferAttribute(uvs, 2) );
@@ -187,7 +233,7 @@
 		geometry.computeBoundingSphere();
 		// geometry.computeFaceNormals();
 
-		var mesh = new THREE.Mesh( geometry, material );
+		var mesh = new THREE.Mesh( geometry, img_tex );
 
 		mesh.position.x -= (tile_width * tile_count / 2);
 		mesh.position.z -= (tile_width * tile_count / 2);
