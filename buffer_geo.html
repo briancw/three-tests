@@ -26,8 +26,8 @@
 		(function animloop(){
 			requestAnimFrame(animloop);
 
-			foo.rotateX( Math.PI / 180 * 1);
-			foo.rotateZ( Math.PI / 180 * 0.5);
+			foo.rotateX( Math.PI / 180 * 2);
+			foo.rotateZ( Math.PI / 180 * 1);
 
 			renderer.render( scene, camera );
 			stats.update();
@@ -98,7 +98,7 @@
 		for(var ix = 0; ix < tile_count; ix++){
 			for(var iz = 0; iz < tile_count; iz++){
 				// var rnd_height = Math.random() * 10;
-				var rnd_height = 0;
+				var rnd_height = Math.random() * 50;
 				var bottom_height = rnd_height - tile_width;
 
 				tile_tops.vertex_positions.push(
