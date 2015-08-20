@@ -6,10 +6,9 @@ var auto_pan = location.search.split('auto_pan=')[1];
 
 // var cube_size = Math.round(doc_diagonal / tile_width * 1.5);
 
-// var cube_size = 44;
 // var tile_width = 50;
 var cube_size = 36;
-var adjusted_cube_size = cube_size + 1;
+// var cube_size = 72;
 var map_size = 2500000;
 // var map_size = 36;
 
@@ -189,7 +188,7 @@ function Network(){
 		}
 
 		if( tmp_origin_points.length ){
-			var map_params = {cube_size: adjusted_cube_size, map_size: map_size, origin_points: tmp_origin_points};
+			var map_params = {cube_size: cube_size, map_size: map_size, origin_points: tmp_origin_points};
 			ws.send( get_json({type:'get_map_data', map_params:map_params}) );
 		} else {
 			// No new map data, update ui
@@ -281,16 +280,28 @@ function Terrain(){
 			var this_height = tilemap[i].height;
 			var bottom_height = this_height - self.tile_width;
 
-			if( tilemap[i].x < cube_size ){
+			if( tilemap[i].x < (cube_size - 1) ){
 				var east_height = tilemap[ (i*1)+1 ].height;
 			} else {
 				var east_height = -10;
 			}
 
-			if( tilemap[i].z < cube_size ){
-				var south_height = tilemap[ (i*1) + cube_size + 1 ].height;
+			if( tilemap[i].x > 0 ){
+				var west_height = tilemap[ (i*1)-1 ].height;
+			} else {
+				var west_height = -10;
+			}
+
+			if( tilemap[i].z < (cube_size - 1) ){
+				var south_height = tilemap[ (i*1) + cube_size ].height;
 			} else {
 				var south_height = -10;
+			}
+
+			if( tilemap[i].z > 0 ){
+				var north_height = tilemap[ (i*1) - cube_size ].height;
+			} else {
+				var north_height = -10;
 			}
 
 			var x_min = tilemap[i].x*self.tile_width;
@@ -329,15 +340,21 @@ function Terrain(){
 					[ x_max, this_height, z_min ]
 				);
 
-				uv_map.push(
-					[0, 0.5],
-					[0, 0],
-					[1, 0],
+				this.push_uvs(uv_map);
+			}
 
-					[0, 0.5],
-					[1, 0],
-					[1, 0.5]
+			if(west_height < this_height){ // If West side lesser
+				vertex_positions.push(
+					[ x_min, this_height, z_min ],
+					[ x_min, bottom_height, z_min ],
+					[ x_min, bottom_height, z_max ],
+
+					[ x_min, this_height, z_min ],
+					[ x_min, bottom_height, z_max ],
+					[ x_min, this_height, z_max ]
 				);
+
+				this.push_uvs(uv_map);
 			}
 
 			if(south_height < this_height){ // If South side lesser
@@ -351,15 +368,21 @@ function Terrain(){
 					[ x_max, this_height, z_max ]
 				);
 
-				uv_map.push(
-					[0, 0.5],
-					[0, 0],
-					[1, 0],
+				this.push_uvs(uv_map);
+			}
 
-					[0, 0.5],
-					[1, 0],
-					[1, 0.5]
+			if(north_height < this_height){ // If North side lesser
+				vertex_positions.push(
+					[ x_max, this_height, z_min ],
+					[ x_max, bottom_height, z_min ],
+					[ x_min, bottom_height, z_min ],
+
+					[ x_max, this_height, z_min ],
+					[ x_min, bottom_height, z_min ],
+					[ x_min, this_height, z_min ]
 				);
+
+				this.push_uvs(uv_map);
 			}
 
 		}
@@ -401,48 +424,16 @@ function Terrain(){
 		this.tilemaps[tilemap_index] = chunk;
 	}
 
-	this.get_adjacent_tops = function(tilemap, tile_index, height, x, z){
-		adjacent_tiles = {};
+	this.push_uvs = function(uv_map){
+		uv_map.push(
+			[0, 0.5],
+			[0, 0],
+			[1, 0],
 
-		if( x > 0 ){
-			var west_height = tilemap[(tile_index*1)-1].height;
-
-			if(west_height == height){
-				adjacent_tiles.west_match = true;
-			}
-		}
-		if( z > 0 ){
-			var north_height = tilemap[(tile_index*1)-adjusted_cube_size].height;
-
-			if(north_height == height){
-				adjacent_tiles.north_match = true;
-			}
-		}
-
-		return adjacent_tiles;
-	}
-
-	this.get_adjacent_sides = function(tilemap, tile_index, height, x, z){
-		adjacent_tiles = {};
-
-		if( x < cube_size && z < cube_size){
-			var east_height = tilemap[(tile_index*1)+1].height;
-			var south_height = tilemap[(tile_index*1)+adjusted_cube_size].height;
-
-			if(east_height > height){
-				adjacent_tiles.east_side_greater = true;
-			} else if(east_height < height){
-				adjacent_tiles.east_side_smaller = true;
-			}
-
-			if(south_height > height){
-				adjacent_tiles.south_side_greater = true;
-			} else if(south_height < height){
-				adjacent_tiles.south_side_smaller = true;
-			}
-		}
-
-		return adjacent_tiles;
+			[0, 0.5],
+			[1, 0],
+			[1, 0.5]
+		);
 	}
 
 }

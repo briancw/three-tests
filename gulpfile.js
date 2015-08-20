@@ -17,7 +17,8 @@ function swallowError (error) {
     gutil.beep();
     notifier.notify({
         title: 'Gulp Error',
-        message: 'Error while compiling Scss'
+        message: "Error while compiling Scss\n" + error.toString(),
+        sound: true
     });
     this.emit('end');
 }
