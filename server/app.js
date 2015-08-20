@@ -155,7 +155,7 @@ terrain_simplex.persistence = 0.6;
 			// var elevation = fast_simplex.get4DNoise(nx,ny,nz,nw) + 0.55;
 
 			var elevation = (terrain_simplex.get2DNoise(x, y) + 1) / 2;
-			elevation = Math.round(elevation * 10) * 100;
+			elevation = Math.round(elevation * 10) * 50;
 			// if( Math.round(Math.random()*500) == 10 ){ console.log( elevation ); }
 			var tile_data = {height: elevation, x: local_x, z: local_y};
 
