@@ -3,14 +3,14 @@ var FastSimplexNoise = require('fast-simplex-noise');
 var WebSocketServer = require('ws').Server;
 var wss = new WebSocketServer({ port: 9005 });
 
-// var Redis = require('redis');
-// var redis = Redis.createClient(6379, 'localhost');
+var Redis = require('redis');
+var redis = Redis.createClient(6379, 'localhost');
 
-// redis.on("error", function(err) {
-// 	console.error("Error connecting to redis", err);
-// });
+redis.on("error", function(err) {
+	console.error("Error connecting to redis", err);
+});
 
-// redis.select(1);
+redis.select(1);
 
 // var world_seed = Math.random();
 function random(){
@@ -140,13 +140,15 @@ function generate_tilemap(map_params, origin_point){
 terrain_simplex.amplitude = 1;
 terrain_simplex.octaves = 12;
 terrain_simplex.frequency = 0.01;
-terrain_simplex.persistence = 0.6;
+terrain_simplex.persistence = 0.2;
 
 	for(y = start_y; y < cube_size + start_y; y++){
-
 		var local_x = 0;
 
 		for(x = start_x; x < cube_size + start_x; x++){
+			var tmp_index = (y * map_size) + x;
+
+random_log( tmp_index, 3000 )
 
 			// nx = Math.cos( ((x/cube_size) * scale) * 2 * Math.PI );
 			// ny = Math.cos( ((y/cube_size) * scale) * 2 * Math.PI );
@@ -156,61 +158,9 @@ terrain_simplex.persistence = 0.6;
 
 			var elevation = (terrain_simplex.get2DNoise(x, y) + 1) / 2;
 			elevation = Math.round(elevation * 10) * 50;
-			// if( Math.round(Math.random()*500) == 10 ){ console.log( elevation ); }
+
 			var tile_data = {height: elevation, x: local_x, z: local_y};
 
-			// if(Math.round(Math.random()*500) == 10){ console.log(elevation) }
-
-/*
-			var temperature = calculate_temperature(elevation, y, start_y, cube_size);
-			tile_data.temperature = temperature;
-
-
-			var foliage_density = 0;
-			var lake_density = 0;
-			if(elevation > 0.57){
-				lake_density = lake_simplex.get4DNoise(nx,ny,nz,nw) + 0.5;
-				foliage_density = foliage_simplex.get4DNoise(nx,ny,nz,nw);
-			}
-			tile_data.foliage_density = foliage_density;
-			tile_data.lake_density = lake_density;
-
-			if(elevation > 0 && elevation < 0.57){
-				tile_data.type = 'ocean';
-			} else {
-				if(lake_density > 0.8){
-					if(elevation > 0.6 && elevation < 0.75 && foliage_density < -0.25 ){
-						tile_data.type = 'oasis';
-					} else if(elevation > 0.82 && elevation < 0.92){
-						tile_data.type = 'glacier';
-					} else {
-						tile_data.type = 'lake';
-					}
-				} else {
-					if(elevation > 0.57 && elevation < 0.57002){
-						tile_data.type = 'beach';
-					} else if(elevation > 0.57002 && elevation < 0.57003){
-						tile_data.type = 'beach_dirt';
-					} else if(elevation > 0.57003 && elevation < 0.6){
-						tile_data.type = 'inland_costal';
-					} else if(elevation > 0.6 && elevation < 0.75 ){
-						if(foliage_density > 0.3){
-							tile_data.type = 'jungle';
-						} else if(foliage_density < -0.25){
-							tile_data.type = 'inland_desert';
-						} else {
-							tile_data.type = 'inland';
-						}
-					} else if(elevation > 0.75 && elevation < 0.82){
-						tile_data.type = 'lower_mountain';
-					} else if(elevation > 0.82 && elevation < 0.92){
-						tile_data.type = 'upper_mountain';
-					} else if(elevation > 0.92 && elevation < 2){
-						tile_data.type = 'mountain_peak';
-					}
-				}
-			}
-*/
 			tilemap.push( tile_data );
 
 			local_x++;
@@ -244,3 +194,9 @@ function calculate_temperature(elevation, y, start_y, cube_size){
 	return temperature;
 }
 
+function random_log(input, odds){
+	odds = typeof(odds) != 'undefined' ? odds : 10;
+	if( Math.round( Math.random() * odds ) == 2 ){
+		console.log( input );
+	}
+}
