@@ -148,7 +148,7 @@ terrain_simplex.persistence = 0.2;
 		for(x = start_x; x < cube_size + start_x; x++){
 			var tmp_index = (y * map_size) + x;
 
-random_log( tmp_index, 3000 )
+// random_log( tmp_index, 3000 )
 
 			// nx = Math.cos( ((x/cube_size) * scale) * 2 * Math.PI );
 			// ny = Math.cos( ((y/cube_size) * scale) * 2 * Math.PI );

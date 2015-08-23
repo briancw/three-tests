@@ -12,8 +12,8 @@ var adjusted_cube_size = cube_size + 2;
 var map_size = 2500000;
 // var map_size = 36;
 
-var origin = [552648, 429251];
-var start_origin = [552648, 429251];
+var origin = [0, 0];
+var start_origin = [0, 0];
 
 // origin = [0, 0];
 // start_origin = [10, 10];
@@ -170,7 +170,7 @@ function Network(){
 
 	ws.onopen = function(){
 		init_socket_connect = true;
-		self.get_map_data( origin_point, 2 );
+		self.get_map_data( origin_point, 1 );
 	};
 
 	this.get_map_data = function(origin_point, distance){
@@ -237,13 +237,23 @@ function Terrain(){
 		self.green = 0x417a2d;
 		self.blue = 0x254e78;
 
-		// self.light = new THREE.Color( 0xffffff );
-		// self.shadow = new THREE.Color( 0x505050 );
+		self.light = new THREE.Color( 0xffffff );
+		self.shadow = new THREE.Color( 0x505050 );
 
 		var atlas_tex_file = THREE.ImageUtils.loadTexture('assets/img/new_atlas.png');
-		self.atlas_tex = new THREE.MeshLambertMaterial({ map: atlas_tex_file });
+		self.atlas_tex = new THREE.MeshLambertMaterial({ map: atlas_tex_file, vertexColors: THREE.VertexColors });
+		// self.atlas_tex = new THREE.MeshLambertMaterial({ color: self.green, vertexColors: THREE.VertexColors });
 		self.atlas_tex.magFilter = THREE.NearestFilter;
 		self.atlas_tex.minFilter = THREE.LinearMipMapLinearFilter;
+
+		self.face_color_map = [
+			self.light,
+			self.shadow,
+			self.shadow,
+			self.light,
+			self.shadow,
+			self.light
+		];
 
 	})();
 
@@ -263,6 +273,7 @@ function Terrain(){
 
 		var vertex_positions = [];
 		var uv_map = [];
+		var vertex_colors = [];
 
 		for(var i = 0; i < tilemap.length; i++){
 			if(tilemap[i].x == 0 || tilemap[i].z == 0 || tilemap[i].x == adjusted_cube_size - 1 || tilemap[i].z == adjusted_cube_size - 1){
@@ -291,6 +302,15 @@ function Terrain(){
 				[ x_max, this_height, z_max ]
 			);
 
+			vertex_colors.push(
+				self.light,
+				self.light,
+				self.light,
+				self.light,
+				self.light,
+				self.light
+			);
+
 			uv_map.push(
 				[0, 0.5],
 				[1, 1],
@@ -312,6 +332,7 @@ function Terrain(){
 					[ x_max, this_height, z_min ]
 				);
 
+				this.push_colors(vertex_colors);
 				this.push_uvs(uv_map);
 			}
 
@@ -326,6 +347,7 @@ function Terrain(){
 					[ x_min, this_height, z_max ]
 				);
 
+				this.push_colors(vertex_colors);
 				this.push_uvs(uv_map);
 			}
 
@@ -340,6 +362,7 @@ function Terrain(){
 					[ x_max, this_height, z_max ]
 				);
 
+				this.push_colors(vertex_colors);
 				this.push_uvs(uv_map);
 			}
 
@@ -354,6 +377,7 @@ function Terrain(){
 					[ x_min, this_height, z_min ]
 				);
 
+				this.push_colors(vertex_colors);
 				this.push_uvs(uv_map);
 			}
 
@@ -361,6 +385,7 @@ function Terrain(){
 
 		var vertices = new Float32Array( vertex_positions.length * 3 );
 		var uvs = new Float32Array( uv_map.length * 2 );
+		var vcolors = new Float32Array( vertex_colors.length * 3 );
 
 		for ( var i = 0; i < vertex_positions.length; i++ ) {
 			vertices[ i*3 + 0 ] = vertex_positions[i][0];
@@ -373,8 +398,15 @@ function Terrain(){
 			uvs[ i*2 + 1 ] = uv_map[i][1];
 		}
 
+		for( var i = 0; i < vertex_colors.length; i++ ){
+			vcolors[(i * 3) + 0] = vertex_colors[i].r;
+			vcolors[(i * 3) + 1] = vertex_colors[i].g;
+			vcolors[(i * 3) + 2] = vertex_colors[i].b;
+		}
+
 		chunk_geometry.addAttribute('uv', new THREE.BufferAttribute(uvs, 2) );
-		chunk_geometry.addAttribute( 'position', new THREE.BufferAttribute( vertices, 3 ) );
+		chunk_geometry.addAttribute('position', new THREE.BufferAttribute(vertices, 3) );
+		chunk_geometry.addAttribute('color', new THREE.BufferAttribute(vcolors, 3) );
 
 		chunk_geometry.computeBoundingSphere();
 		chunk_geometry.computeFaceNormals();
@@ -389,8 +421,8 @@ function Terrain(){
 
 		chunk.position.x = origin_x;
 		chunk.position.z = origin_z;
-		// chunk.position.x *= 1.01;
-		// chunk.position.z *= 1.01;
+		// chunk.position.x *= 1.001;
+		// chunk.position.z *= 1.001;
 
 		chunk.is_chunk = true;
 
@@ -406,6 +438,17 @@ function Terrain(){
 			[0, 0.5],
 			[1, 0],
 			[1, 0.5]
+		);
+	}
+
+	this.push_colors = function(vertex_colors){
+		vertex_colors.push(
+			self.light,
+			self.shadow,
+			self.shadow,
+			self.light,
+			self.shadow,
+			self.light
 		);
 	}
 
@@ -428,6 +471,7 @@ function UI(){
 	this.raycaster = new THREE.Raycaster();
 	this.mouse = new THREE.Vector2();
 	this.active_chunks = [];
+	this.running_raycast = false;
 
 	this.tilemaps_shown = {
 		n: false,
@@ -502,27 +546,28 @@ function UI(){
 		// this.rollOverMesh.position.y = 0;
 		scene.add( this.rollOverMesh );
 
-		$(renderer.domElement).mousemove(function(event){
-			event.preventDefault();
+		// $(renderer.domElement).mousemove(function(event){
+		// 	event.preventDefault();
 
-			self.is_click = false;
+		// 	self.is_click = false;
 
-			var intersect_point = self.raycast(event);
-			if( typeof(intersect_point) != 'undefined' ){
-				self.rollOverMesh.position.copy( intersect_point[0] )
-				// self.rollOverMesh.position.y = 0.1;
-				self.rollOverMesh.visible = true;
-			}
+		// 	if(!self.running_raycast){
+		// 		var intersect_point = self.raycast(event);
+		// 		if( typeof(intersect_point) != 'undefined' ){
+		// 			self.rollOverMesh.position.copy( intersect_point[0] )
+		// 			self.rollOverMesh.visible = true;
+		// 		}
+		// 	}
 
-		});
+		// });
 
 		$(renderer.domElement).click(function(event){
 			event.preventDefault();
 
 			var intersect_point = self.raycast(event);
 			if( typeof(intersect_point) != 'undefined' ){
-				// console.log( intersect_point[1] ); // True World coord
-				console.log( intersect_point[0] );
+				console.log( intersect_point[1] ); // True World coord
+				// console.log( intersect_point[0] );
 			}
 
 		});
@@ -540,6 +585,8 @@ function UI(){
 	}
 
 	this.raycast = function(event){
+		self.running_raycast = true;
+
 		self.mouse.set( ( event.clientX / window.innerWidth ) * 2 - 1, - ( event.clientY / window.innerHeight ) * 2 + 1 );
 		self.raycaster.setFromCamera( self.mouse, camera );
 
@@ -552,10 +599,17 @@ function UI(){
 			intersect.point.divideScalar(terrain.tile_width).floor().multiplyScalar(terrain.tile_width).addScalar( terrain.tile_width/2 );
 			intersect.point.y -= (terrain.tile_width / 2);
 
-			var output_point = [intersect.point.x - (terrain.tile_width/4), intersect.point.z - (terrain.tile_width/4)];
-			var true_coords = [output_point[0] + origin[0], output_point[1] + origin[1]];
+			var output_point = [intersect.point.x - (terrain.tile_width/2) + (terrain.tile_width * cube_size / 2), intersect.point.z - (terrain.tile_width/2) + (terrain.tile_width * cube_size / 2)];
+			var true_coords = [output_point[0] / terrain.tile_width, output_point[1] / terrain.tile_width];
+			true_coords[0] += origin[0];
+			true_coords[1] += origin[1];
+			// var true_coords = output_point;
+			// var true_coords = [output_point[0] - (terrain.tile_width * cube_size / 2), output_point[1] - (terrain.tile_width * cube_size / 2)];
+
+			self.running_raycast = false;
 			return [intersect.point, true_coords];
 		}
+		self.running_raycast = false;
 	}
 
 	this.check_chunks = function(){
@@ -684,7 +738,7 @@ function UI(){
 			origin = tmp_origin;
 			origin_point = coords_to_index( origin );
 
-			network.get_map_data(origin_point, 2);
+			network.get_map_data(origin_point, 1);
 
 			this.tilemaps_shown.n = false;
 			this.tilemaps_shown.s = false;
