@@ -4,20 +4,13 @@ var doc_height = $(window).height() - $('.ui_container').height();
 
 var auto_pan = location.search.split('auto_pan=')[1];
 
-// var cube_size = Math.round(doc_diagonal / tile_width * 1.5);
-
 var tile_width = 50;
 var cube_size = 72;
 var adjusted_cube_size = cube_size + 2;
 var map_size = 2500000;
-// var map_size = 36;
 
-var origin = [0, 0];
-var start_origin = [0, 0];
-
-// origin = [0, 0];
-// start_origin = [10, 10];
-
+var origin = [1000, 1000];
+var start_origin = [1000, 1000];
 var origin_point = coords_to_index(origin);
 
 function coords_to_index(coords){
@@ -45,9 +38,14 @@ function origin_points(){
 	return origin_points;
 }
 
+function create_building_at_index(building_type, index){
+	network.create_building(building_type, index);
+}
+
 var network = new Network();
 var terrain = new Terrain();
 var models = new Models();
+var building = new Building();
 
 init();
 
@@ -85,8 +83,6 @@ window.requestAnimFrame = (function(){
 var pointer;
 
 function init(){
-	models.load_model('assets/models/factory.json', 'factory');
-
 	renderer = new THREE.WebGLRenderer();
 	renderer.setClearColor( 0xf0f0f0 );
 	renderer.setPixelRatio( window.devicePixelRatio );
@@ -171,6 +167,7 @@ function Network(){
 	ws.onopen = function(){
 		init_socket_connect = true;
 		self.get_map_data( origin_point, 1 );
+		self.get_building_data();
 	};
 
 	this.get_map_data = function(origin_point, distance){
@@ -196,6 +193,15 @@ function Network(){
 		}
 	};
 
+	this.get_building_data = function(){
+		var building_params = {origin: origin, cube_size: cube_size};
+		ws.send( get_json( {type:'get_building_data', params: building_params } ) );
+	};
+
+	this.create_building = function(building_type, index){
+		ws.send( get_json({type:'make_building', building_type: building_type, building_index: index}) )
+	}
+
 	ws.onmessage = function (ret){
 		var received_msg = JSON.parse(ret.data);
 		var message_type = received_msg.type;
@@ -204,6 +210,12 @@ function Network(){
 
 			case 'map_data':
 				terrain.update_tilemaps(received_msg.tilemaps);
+				break;
+
+			case 'building_data':
+				// building.building_map = received_msg.building_map;
+				building.draw_buildings( received_msg.building_map );
+
 				break;
 
 			default:
@@ -566,8 +578,9 @@ function UI(){
 
 			var intersect_point = self.raycast(event);
 			if( typeof(intersect_point) != 'undefined' ){
-				console.log( intersect_point[1] ); // True World coord
-				// console.log( intersect_point[0] );
+				// console.log( intersect_point[1] ); // True World coord
+				console.log( coords_to_index(intersect_point[1]) );
+				// console.log( intersect_point[1] )
 			}
 
 		});
@@ -595,16 +608,15 @@ function UI(){
 		if ( intersects.length > 0 ) {
 			var intersect = intersects[ 0 ];
 
+
 			intersect.point.y = Math.round( intersect.point.y );
 			intersect.point.divideScalar(terrain.tile_width).floor().multiplyScalar(terrain.tile_width).addScalar( terrain.tile_width/2 );
 			intersect.point.y -= (terrain.tile_width / 2);
 
-			var output_point = [intersect.point.x - (terrain.tile_width/2) + (terrain.tile_width * cube_size / 2), intersect.point.z - (terrain.tile_width/2) + (terrain.tile_width * cube_size / 2)];
-			var true_coords = [output_point[0] / terrain.tile_width, output_point[1] / terrain.tile_width];
-			true_coords[0] += origin[0];
-			true_coords[1] += origin[1];
-			// var true_coords = output_point;
-			// var true_coords = [output_point[0] - (terrain.tile_width * cube_size / 2), output_point[1] - (terrain.tile_width * cube_size / 2)];
+			var output_point = [(intersect.point.x - (terrain.tile_width/2) ) / terrain.tile_width, (intersect.point.z - (terrain.tile_width/2) ) / terrain.tile_width];
+			var true_coords = [output_point[0] + (cube_size / 2), output_point[1] + (cube_size / 2)];
+			true_coords[0] += start_origin[0];
+			true_coords[1] += start_origin[1];
 
 			self.running_raycast = false;
 			return [intersect.point, true_coords];
@@ -777,4 +789,15 @@ function Models(){
 		});
 	}
 
+}
+
+function Building(){
+	this.draw_buildings = function(building_map){
+		// console.log( building_map );
+		for( var i = 0; i < building_map.length; i++){
+			// console.log( building_map[i] == null )
+		}
+		console.log( building_map[2500000998] )
+
+	}
 }
