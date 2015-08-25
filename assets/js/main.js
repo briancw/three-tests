@@ -166,11 +166,10 @@ function Network(){
 
 	ws.onopen = function(){
 		init_socket_connect = true;
-		self.get_map_data( origin_point, 1 );
-		self.get_building_data();
+		self.get_map_data( origin_point, 1, true );
 	};
 
-	this.get_map_data = function(origin_point, distance){
+	this.get_map_data = function(origin_point, distance, get_building_data){
 
 		var tmp_origin_points = Array();
 		var start_origin = origin_point - (map_size * cube_size * distance) - (cube_size * distance);
@@ -185,7 +184,7 @@ function Network(){
 		}
 
 		if( tmp_origin_points.length ){
-			var map_params = {cube_size: adjusted_cube_size, map_size: map_size, origin_points: tmp_origin_points};
+			var map_params = {cube_size: adjusted_cube_size, map_size: map_size, origin_points: tmp_origin_points, get_building_data: get_building_data};
 			ws.send( get_json({type:'get_map_data', map_params:map_params}) );
 		} else {
 			// No new map data, update ui
@@ -193,10 +192,10 @@ function Network(){
 		}
 	};
 
-	this.get_building_data = function(){
-		var building_params = {origin: origin, cube_size: cube_size};
-		ws.send( get_json( {type:'get_building_data', params: building_params } ) );
-	};
+	// this.get_building_data = function(){
+	// 	var building_params = {origin: origin, cube_size: cube_size};
+	// 	ws.send( get_json( {type:'get_building_data', params: building_params } ) );
+	// };
 
 	this.create_building = function(building_type, index){
 		ws.send( get_json({type:'make_building', building_type: building_type, building_index: index}) )
@@ -210,11 +209,14 @@ function Network(){
 
 			case 'map_data':
 				terrain.update_tilemaps(received_msg.tilemaps);
+				if(received_msg.buildings){
+					building.update_buildings(received_msg.buildings);
+				}
 				break;
 
-			case 'building_data':
+			// case 'building_data':
 				// building.building_map = received_msg.building_map;
-				building.draw_buildings( received_msg.building_map );
+				// building.draw_buildings( received_msg.building_map );
 
 				break;
 
@@ -240,7 +242,8 @@ function Network(){
 
 function Terrain(){
 	var self = this;
-	this.tilemaps = Object();
+	this.tilemaps = {};
+	this.tilemap_raw_data = {};
 	this.tile_width = typeof(tile_width) != 'undefined' ? tile_width : 100;
 	this.map_ready = false;
 
@@ -291,6 +294,8 @@ function Terrain(){
 			if(tilemap[i].x == 0 || tilemap[i].z == 0 || tilemap[i].x == adjusted_cube_size - 1 || tilemap[i].z == adjusted_cube_size - 1){
 				continue;
 			}
+
+			self.tilemap_raw_data[ (tilemap_index*1) + tilemap[i].x + (tilemap[i].z * map_size) ] = tilemap[i].height;
 
 			var this_height = tilemap[i].height;
 			var bottom_height = this_height - self.tile_width;
@@ -792,12 +797,29 @@ function Models(){
 }
 
 function Building(){
-	this.draw_buildings = function(building_map){
-		// console.log( building_map );
-		for( var i = 0; i < building_map.length; i++){
-			// console.log( building_map[i] == null )
-		}
-		console.log( building_map[2500000998] )
+	var self = this;
+	this.buildings = {};
+	this.basic_building = new THREE.Mesh( new THREE.BoxGeometry(50,50,50) );
 
+	this.update_buildings = function(building_map){
+		// console.log( building_map );
+		for( var i in building_map ){
+			var building_height = terrain.tilemap_raw_data[i * 1];
+			var building_coords = index_to_coords( i * 1 );
+			building_coords[0] -= start_origin[0];
+			building_coords[1] -= start_origin[1];
+			building_coords[0] *= terrain.tile_width;
+			building_coords[1] *= terrain.tile_width;
+			var tmp_building = self.basic_building.clone();
+
+			building_height = 500;
+			// building_height += 50;
+			// building_coords[0] *= terrain.tile_width;
+
+			tmp_building.position.set(building_coords[0], building_height, building_coords[1]);
+			self.buildings[ i*1 ] = tmp_building;
+			scene.add( tmp_building );
+			console.log( building_coords[0], building_height, building_coords[1] )
+		}
 	}
 }

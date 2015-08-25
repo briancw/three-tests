@@ -70,24 +70,39 @@ wss.on('connection', function connection(ws) {
 					tilemaps[tmp_origin_point] = generate_tilemap(parsed_message.map_params, tmp_origin_point);
 				}
 
-				ws.send( get_json( {type:'map_data', tilemaps: tilemaps} ) );
-				console.timeEnd('generate map');
+				if(parsed_message.map_params.get_building_data){
+					// for(var i in parsed_message.map_params.origin_points){
+					// 	var tmp_origin_point = parsed_message.map_params.origin_points[i];
+					// 	console.log( tmp_origin_point )
+					// }
+
+					get_buildings( parsed_message.map_params, function(building_data){
+						// console.log( building_data );
+						ws.send( get_json( {type:'map_data', tilemaps: tilemaps, buildings: building_data} ) );
+						console.timeEnd('generate map');
+					})
+
+				} else {
+					ws.send( get_json( {type:'map_data', tilemaps: tilemaps} ) );
+					console.timeEnd('generate map');
+				}
+
 				break;
 
-			case 'world_map_data':
-				console.time('g');
-				// console.log(parsed_message)
-				var world_tilemap = generate_tilemap( {map_size: parsed_message.map_size, cube_size: parsed_message.cube_size}, parsed_message.origin );
-				// console.log(world_tilemap.length)
-				console.timeEnd('g');
-				ws.send( get_json( {type:'world_map_data', world_tilemap: world_tilemap} ));
-				break;
+			// case 'world_map_data':
+			// 	console.time('g');
+			// 	// console.log(parsed_message)
+			// 	var world_tilemap = generate_tilemap( {map_size: parsed_message.map_size, cube_size: parsed_message.cube_size}, parsed_message.origin );
+			// 	// console.log(world_tilemap.length)
+			// 	console.timeEnd('g');
+			// 	ws.send( get_json( {type:'world_map_data', world_tilemap: world_tilemap} ));
+			// 	break;
 
-			case 'get_building_data':
-				get_buildings( parsed_message.params, function(ret){
-					ws.send( get_json( {type:'building_data', building_map: ret} ) );
-				});
-				break;
+			// case 'get_building_data':
+			// 	get_buildings( parsed_message.params, function(ret){
+			// 		ws.send( get_json( {type:'building_data', building_map: ret} ) );
+			// 	});
+			// 	break;
 
 			case 'make_building':
 				var building_type = parsed_message.building_type;
@@ -192,32 +207,33 @@ terrain_simplex.persistence = 0.2;
 
 function get_buildings(params, callback){
 
-	var tmp_origin = params.origin;
+	// var tmp_origin = params.origin;
 
-	var first_index = (tmp_origin[0] * map_size) + tmp_origin[1];
-	var cube_size = params.cube_size;
+	// var first_index = (tmp_origin[0] * map_size) + tmp_origin[1];
+	var first_index = params.origin_points[4];
+	var cube_size = params.cube_size - 2; // Adjusted for map data buffer
 
 	var range = [];
-	var buildings;
+	var buildings_parsed = {};
 
 	redis.select(3);
 
-console.log( first_index, first_index + (cube_size*map_size) );
-
 	for(var i = first_index; i < first_index + (cube_size*map_size); i += map_size ){
 		for(var i2 = i; i2 < i + cube_size; i2++){
-			range.push(i2);
-			// if( i2 == 2500000998 ){
-				// console.log('got')
-			// }
-			random_log(i2, 500)
+			range.push( pad(i2, 13) );
 		}
 	}
 
 	redis.mget(range, function(err, results){
-		buildings = results;
+		for(var i = 0; i < results.length; i++){
+			if( results[i] != null){
+				// console.log( first_index + i );
+				// console.log( range[i], i )
+				buildings_parsed[ range[i] ] = results[i];
+			}
+		}
 
-		callback(buildings);
+		callback(buildings_parsed);
 	});
 
 }
